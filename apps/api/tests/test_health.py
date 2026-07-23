@@ -1,10 +1,14 @@
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
 from weavance_api.main import app
 
 
-def test_health() -> None:
-    response = TestClient(app).get("/health")
+async def test_health() -> None:
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "environment": "local"}
