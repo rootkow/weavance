@@ -15,7 +15,7 @@ A user enters an unstructured brain dump and receives one manageable next action
 ## Milestone 1: First vertical slice
 
 1. Capture and store the original brain dump.
-2. Interpret it as typed, versioned task and action proposals without discarding the original wording.
+2. Interpret it as typed, versioned task and action proposals while preserving the original wording.
 3. Let the user confirm or correct material assumptions.
 4. Infer capacity conservatively from interaction signals, with an optional lightweight check-in.
 5. Select one concrete next action.
@@ -44,8 +44,8 @@ A user enters an unstructured brain dump and receives one manageable next action
 - A brain dump can be submitted in under 30 seconds.
 - The result contains one action that can be started immediately.
 - The system states why it chose that action.
-- The user can reduce or reject the action without navigating a backlog.
-- A rejected action does not return unchanged as an overdue item.
+- The user can resize, defer, or swap the action directly from the recommendation.
+- The next recommendation reflects the user's response and current context.
 - Subjective values are represented as sourced observations, uncertain estimates, or unknowns.
 - Deterministic policy honors explicit user intent regardless of interpreter or recommendation strategy.
-- The interpretation contract can be tested without calling a live model.
+- The interpretation contract can be tested with a local test double.
