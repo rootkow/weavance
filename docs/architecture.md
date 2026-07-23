@@ -21,8 +21,8 @@ The current provider-neutral boundary is documented in the
 
 The deterministic policy layer owns enforceable behavior: explicit deferrals, user boundaries,
 dependency eligibility, completed or canceled state, and the precedence of user corrections.
-It does not attempt to calculate inherently subjective values such as a universally correct task
-duration.
+Subjective values such as task duration remain sourced estimates for the recommendation strategy
+to consider.
 
 The recommendation strategy chooses among policy-eligible actions. The first strategy may use
 transparent rules; later strategies may use a model, personalization, or a hybrid. Every result is
@@ -35,8 +35,8 @@ Interpretation output distinguishes among:
 | Kind | Example | Treatment |
 |---|---|---|
 | Observation | “The application closes Friday” | Preserve its evidence and source |
-| Estimate | “This may take 20–40 minutes” | Store a range and confidence, not a false fact |
-| Policy | “Do not show a deferred action today” | Enforce deterministically |
+| Estimate | “This may take 20–40 minutes” | Store its range and confidence |
+| Policy | “Honor this deferral through today” | Enforce deterministically |
 
 Important interpreted values carry provenance such as `user`, `connected_source`, `model`,
 `default`, or `learned`. Explicit user corrections are authoritative. Unknown values remain

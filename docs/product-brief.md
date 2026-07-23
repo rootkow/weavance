@@ -2,46 +2,46 @@
 
 ## Positioning
 
-Weavance is an adaptive executive-function assistant for people who struggle to translate intention into action. A user can unload everything occupying their mind; Weavance identifies what deserves attention, makes starting small enough, protects legitimate recovery time, and rebuilds the plan without shame when circumstances change.
+Weavance is an adaptive executive-function assistant for people who want a simpler bridge from intention to action. A user can unload everything occupying their mind; Weavance identifies what deserves attention, makes the starting point approachable, protects recovery time, and reshapes the plan as circumstances change.
 
 ## Problem
 
-Traditional task and calendar tools assume that users can consistently prioritize, estimate, schedule, initiate, and reschedule their own work. Those are exactly the executive functions that may be impaired by ADHD, stress, burnout, anxiety, or reduced capacity.
+Prioritizing, estimating, scheduling, initiating, and rescheduling all require executive function. Traditional task and calendar tools leave most of that work to the user, even though the effort can vary significantly with ADHD, stress, burnout, anxiety, or day-to-day capacity.
 
-When a plan is missed, many tools preserve every overdue item. This turns yesterday's intentions into today's guilt wall, increases avoidance, and makes relief activities more attractive.
+When circumstances change, many tools continue carrying earlier items forward unchanged. The backlog grows at the same moment the user could benefit most from a clear, current starting point.
 
 ## Primary job to be done
 
-When I feel overwhelmed or avoidant, help me decide what to do now, make starting feel possible, and recover gracefully if I cannot do it.
+When everything feels like a lot or I am having trouble getting started, help me choose what would be useful now, make the first step feel possible, and adapt with me as circumstances change.
 
 ## Product principles
 
-1. **One action, not the whole backlog.** The default execution screen shows a concrete next step.
-2. **Skipping is information, not failure.** A response changes the plan and teaches the system.
-3. **No automatic task debt.** Unfinished work is reassessed instead of blindly rolled forward.
-4. **Leisure is a legitimate need.** The system can protect recovery while distinguishing it from avoidance that no longer feels restorative.
-5. **Initiation counts as progress.** Feedback and rewards should not be reserved for completion.
+1. **One clear starting point.** The default execution screen shows a concrete next step.
+2. **Every response is useful context.** Starting, resizing, deferring, or swapping helps shape what comes next.
+3. **Plans stay current.** Open work is reassessed before it is carried forward.
+4. **Recovery time belongs in the plan.** The system protects restorative time and helps the user notice when leisure no longer feels restorative.
+5. **Starting is progress.** Feedback and rewards recognize initiation as well as completion.
 6. **Capacity is contextual.** Plans adapt to the day a person is actually having.
-7. **AI reduces management work.** The user should not have to meticulously categorize and schedule a brain dump.
-8. **Important decisions remain bounded and explainable.** Model suggestions are constrained by deterministic rules and accompanied by reasons.
+7. **AI lightens planning work.** The system organizes and schedules a brain dump with minimal management from the user.
+8. **Important decisions stay bounded and explainable.** Model suggestions follow deterministic rules and include clear reasons.
 
 ## Initial user
 
-The first user is the builder. Early product decisions will be based on daily dogfooding and recorded outcomes rather than generic assumptions about every person with ADHD.
+The first user is the builder. Daily dogfooding and recorded outcomes will ground early product decisions in the builder's lived experience.
 
 ## Success signal
 
-The earliest meaningful signal is not task completion volume. It is whether the user starts a suggested action and returns to the system after a disrupted plan.
+The earliest meaningful signal is whether the user starts a suggested action and feels able to return as plans evolve.
 
 For the first dogfooding period, track:
 
-- Recommendation accepted, resized, deferred, swapped, or rejected
+- Recommendation accepted, resized, deferred, swapped, or passed
 - Whether work started
 - Time-to-start
 - Whether the promised stopping point was honored
 - Perceived difficulty before and after
-- Whether the recommendation created pressure or relief
-- Whether the user returned after avoidance or disruption
+- Whether the recommendation brought relief or added pressure
+- Whether the user returned after plans changed or momentum faded
 
 ## Safety boundary
 

@@ -2,11 +2,11 @@
 
 **Weave what matters into one manageable next step.**
 
-Weavance is an adaptive executive-function assistant that turns an unstructured brain dump into one manageable next action and helps the user recover when the day goes off plan.
+Weavance is an adaptive executive-function assistant that turns an unstructured brain dump into one manageable next action and adapts the plan as the day changes.
 
 ## Guiding idea
 
-Missing part of a routine is expected behavior, not failure. Weavance does not carry every unfinished item forward as overdue task debt. It reassesses what matters, what fits the user's current capacity, and what would make starting easier.
+Routines can flex with real life. Weavance treats changes in momentum as useful context and builds a fresh path forward around what matters, what fits the user's current capacity, and what would make starting easier.
 
 ## Repository layout
 

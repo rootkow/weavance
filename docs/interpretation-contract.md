@@ -2,7 +2,7 @@
 
 The interpretation contract is the provider-neutral boundary between a raw `Capture` and proposed
 tasks and actions. An interpreter can be backed by a hosted model, a local model, a deterministic
-fallback, or a test fake without changing the rest of the application.
+fallback, or a test fake while the rest of the application consumes the same contract.
 
 ## Input
 
@@ -12,8 +12,8 @@ fallback, or a test fake without changing the rest of the application.
 - A timezone-aware reference timestamp for resolving relative phrases such as “tomorrow”
 - The user's IANA time zone for interpreting local dates and times
 
-Capacity and recommendation state do not belong in this request. Interpretation describes what the
-capture appears to contain; recommendation later decides what is useful to show.
+Capacity and recommendation state are handled after this request. Interpretation describes what
+the capture appears to contain; recommendation later decides what is useful to show.
 
 ## Output
 
@@ -26,8 +26,8 @@ capture appears to contain; recommendation later decides what is useful to show.
 - One or more startable action proposals for every proposed task
 - Optional deadline observations, duration estimates, and importance estimates
 
-Zero tasks is valid when the capture contains no actionable work. Subjective or missing values stay
-absent rather than receiving invented defaults.
+Zero tasks is valid when the capture contains no actionable work. Optional fields keep subjective
+or unknown values explicit.
 
 ## Provenance
 
@@ -45,11 +45,11 @@ values should not be treated equally.
 ## Validation guarantees
 
 - Contract objects are immutable after validation.
-- Unknown fields are rejected, preventing provider-specific response data from leaking inward.
+- Unknown fields produce validation errors, keeping the contract provider-neutral.
 - Reference timestamps must be timezone-aware and time zones must be valid IANA names.
-- Duration estimates are positive ranges whose maximum cannot precede their minimum.
+- Duration estimates use positive ranges ordered from minimum to maximum.
 - Task and action proposal IDs are unique within an interpretation.
-- Blank task titles and action descriptions are rejected.
+- Task titles and action descriptions must contain visible text.
 
-These are structural guarantees, not claims that inferred values are objectively correct. Future
-policy and user corrections decide which proposals may become authoritative application state.
+These guarantees describe contract structure. Future policy and user corrections determine which
+proposals become authoritative application state.
