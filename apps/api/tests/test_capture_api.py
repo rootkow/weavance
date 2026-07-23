@@ -1,6 +1,8 @@
 from collections.abc import AsyncIterator
+from unittest.mock import AsyncMock
 from uuid import UUID
 
+import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
@@ -15,6 +17,7 @@ from weavance_api.models import Capture
 
 
 async def test_create_capture_persists_original_text(
+    monkeypatch: pytest.MonkeyPatch,
     test_database_url: str,
 ) -> None:
     engine = create_async_engine(test_database_url)
@@ -24,7 +27,11 @@ async def test_create_capture_persists_original_text(
         async with test_session_factory() as session:
             yield session
 
-    app.dependency_overrides[get_session] = override_get_session
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        get_session,
+        override_get_session,
+    )
     raw_text = "  Renew my license before Friday\nCall the dentist  "
 
     try:
@@ -43,7 +50,6 @@ async def test_create_capture_persists_original_text(
                 select(Capture).where(Capture.id == capture_id)
             )
     finally:
-        app.dependency_overrides.clear()
         await engine.dispose()
 
     assert response_body["raw_text"] == raw_text
@@ -52,7 +58,20 @@ async def test_create_capture_persists_original_text(
     assert stored_capture.raw_text == raw_text
 
 
-async def test_create_capture_rejects_blank_text() -> None:
+async def test_create_capture_rejects_blank_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mock_session = AsyncMock(spec=AsyncSession)
+
+    async def override_get_session() -> AsyncIterator[AsyncSession]:
+        yield mock_session
+
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        get_session,
+        override_get_session,
+    )
+
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
