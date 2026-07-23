@@ -1,8 +1,14 @@
-.PHONY: install api-dev web-dev lint test check
+.PHONY: install db-up db-migrate api-dev web-dev lint test check
 
 install:
 	cd apps/api && uv sync --dev
 	cd apps/web && npm install
+
+db-up:
+	docker compose up -d db
+
+db-migrate:
+	cd apps/api && uv run alembic upgrade head
 
 api-dev:
 	cd apps/api && uv run uvicorn weavance_api.main:app --reload

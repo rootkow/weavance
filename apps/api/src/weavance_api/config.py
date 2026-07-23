@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     environment: str = "local"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+    database_url: str = "postgresql+asyncpg://weavance:weavance@localhost:5432/weavance"
 
 
 @lru_cache

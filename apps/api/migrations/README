@@ -1,0 +1,9 @@
+Schema migrations for the Weavance API.
+
+Create a reviewed migration after changing the SQLAlchemy model:
+
+    uv run alembic revision --autogenerate -m "describe the change"
+
+Apply all migrations:
+
+    uv run alembic upgrade head

@@ -22,11 +22,19 @@ Requirements:
 - [uv](https://docs.astral.sh/uv/)
 - Node.js 22+
 - npm 10+
+- Docker with Compose
 
 Install dependencies:
 
 ```bash
 make install
+```
+
+Start PostgreSQL and apply the schema:
+
+```bash
+make db-up
+make db-migrate
 ```
 
 Run the API and web app in separate terminals:
@@ -49,6 +57,9 @@ Docker Compose is also available:
 ```bash
 docker compose up --build
 ```
+
+The API container applies pending migrations before starting. A deployed environment should run
+migrations as a separate release step.
 
 ## Current scope
 
