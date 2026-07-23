@@ -52,4 +52,8 @@ docker compose up --build
 
 ## Current scope
 
-The initial UI deliberately uses a local deterministic parser and planner. This proves the full interaction boundary before introducing persistence or an LLM provider. See [the MVP scope](docs/mvp.md) for what comes next.
+Milestone 0 established the application shell and delivery tooling. Milestone 1 begins with
+PostgreSQL persistence for immutable brain-dump captures, followed by a typed interpretation
+boundary. Model providers will propose subjective interpretations; deterministic policy will
+enforce user intent and application invariants. See [the MVP scope](docs/mvp.md) for the planned
+vertical slice.
