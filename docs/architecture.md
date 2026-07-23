@@ -16,6 +16,8 @@ flowchart TD
 The interpretation layer converts free-form language and available context into structured
 proposals. A model may suggest task boundaries, possible actions, urgency, duration, dependencies,
 or emotional friction. These values remain uncertain proposals rather than application facts.
+The current provider-neutral boundary is documented in the
+[interpretation contract](interpretation-contract.md).
 
 The deterministic policy layer owns enforceable behavior: explicit deferrals, user boundaries,
 dependency eligibility, completed or canceled state, and the precedence of user corrections.
