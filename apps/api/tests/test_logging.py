@@ -1,5 +1,7 @@
 import json
 import logging
+from datetime import UTC, datetime
+from importlib.metadata import version
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -7,10 +9,17 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from weavance_api import PACKAGE_NAME, __version__
+from weavance_api.config import Settings
 from weavance_api.main import app
-from weavance_api.observability import REQUEST_ID_HEADER
+from weavance_api.observability import REQUEST_ID_HEADER, configure_logging
 from weavance_api.observability.logging import JsonEventFormatter
 from weavance_api.services.captures import create_capture
+
+
+def test_runtime_version_comes_from_package_metadata() -> None:
+    assert __version__ == version(PACKAGE_NAME)
+    assert app.version == __version__
 
 
 async def test_request_log_uses_and_returns_correlation_id(
@@ -92,6 +101,40 @@ def test_json_logging_redacts_sensitive_fields() -> None:
     }
     assert "Call the dentist" not in formatter.format(record)
     assert "very-secret" not in formatter.format(record)
+
+
+def test_json_logging_uses_record_creation_time() -> None:
+    formatter = JsonEventFormatter(environment="test")
+    record = logging.LogRecord(
+        name="weavance_api.test",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg="capture.created",
+        args=(),
+        exc_info=None,
+    )
+    record.created = 1_735_689_600.125
+
+    payload = json.loads(formatter.format(record))
+
+    assert payload["timestamp"] == datetime.fromtimestamp(record.created, UTC).isoformat()
+
+
+def test_configure_logging_normalizes_uvicorn_loggers() -> None:
+    configure_logging(Settings(environment="test", log_format="json"))
+
+    uvicorn_logger = logging.getLogger("uvicorn")
+    uvicorn_error_logger = logging.getLogger("uvicorn.error")
+    uvicorn_access_logger = logging.getLogger("uvicorn.access")
+
+    assert uvicorn_logger.handlers == []
+    assert uvicorn_logger.propagate is True
+    assert uvicorn_error_logger.handlers == []
+    assert uvicorn_error_logger.propagate is True
+    assert uvicorn_access_logger.handlers == []
+    assert uvicorn_access_logger.propagate is False
+    assert uvicorn_access_logger.disabled is True
 
 
 async def test_capture_event_contains_metadata_without_original_text(

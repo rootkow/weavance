@@ -4,10 +4,11 @@ from collections.abc import Mapping, Sequence
 from contextvars import ContextVar, Token
 from datetime import UTC, datetime
 
+from weavance_api import __version__
 from weavance_api.config import Settings
 
 SERVICE_NAME = "weavance-api"
-SERVICE_VERSION = "0.1.0"
+SERVICE_VERSION = __version__
 REQUEST_ID_HEADER = "X-Request-ID"
 
 _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
@@ -130,7 +131,7 @@ class _EventFormatter(logging.Formatter):
             fields = {}
 
         data: dict[str, object] = {
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": datetime.fromtimestamp(record.created, UTC).isoformat(),
             "level": record.levelname.lower(),
             "event": event,
             "service": SERVICE_NAME,
@@ -204,3 +205,13 @@ def configure_logging(settings: Settings) -> None:
     root_logger.handlers.clear()
     root_logger.addHandler(handler)
     root_logger.setLevel(settings.log_level)
+
+    for logger_name in ("uvicorn", "uvicorn.error"):
+        uvicorn_logger = logging.getLogger(logger_name)
+        uvicorn_logger.handlers.clear()
+        uvicorn_logger.propagate = True
+
+    uvicorn_access_logger = logging.getLogger("uvicorn.access")
+    uvicorn_access_logger.handlers.clear()
+    uvicorn_access_logger.propagate = False
+    uvicorn_access_logger.disabled = True
