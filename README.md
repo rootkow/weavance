@@ -61,6 +61,20 @@ docker compose up --build
 The API container applies pending migrations before starting. A deployed environment should run
 migrations as a separate release step.
 
+### Logging
+
+The API writes readable event logs locally and JSON logs in deployed environments. Every HTTP
+response includes an `X-Request-ID` that is also present in the corresponding request log.
+
+Logging can be configured with:
+
+- `WEAVANCE_LOG_LEVEL`: `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`
+- `WEAVANCE_LOG_FORMAT`: `auto`, `console`, or `json`
+
+`auto` selects console output for the `local` environment and JSON everywhere else. Application
+logs contain IDs and bounded metadata; they do not contain brain dumps or other user-authored
+content.
+
 ## Current scope
 
 Milestone 0 established the application shell and delivery tooling. Milestone 1 begins with
