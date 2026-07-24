@@ -58,6 +58,18 @@ unknown unless asking would materially change the recommendation.
 
 `Task` and `Action` remain separate. “Find a job” can be a long-lived task; “open the saved posting and check its requirements” is a startable action.
 
+## Observability and traceability
+
+Weavance uses operational telemetry and product decision history for different questions:
+
+- Structured logs, metrics, and traces describe how a request or background operation executed.
+- Versioned PostgreSQL records describe why an interpretation or recommendation was produced.
+
+Request IDs correlate API activity without becoming Prometheus labels. User-authored content stays
+out of routine logs and telemetry. OpenTelemetry is the planned instrumentation boundary, with
+Prometheus, Loki, Tempo, and Grafana added when the interpretation workflow provides meaningful
+signals to observe. See [ADR 0005](decisions/0005-observability-foundation.md).
+
 ## Planned request path
 
 1. The API stores the raw capture.
