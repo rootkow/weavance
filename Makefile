@@ -1,8 +1,8 @@
 .PHONY: install db-up db-migrate api-dev web-dev lint test check
 
 install:
-	cd apps/api && uv sync --dev
-	cd apps/web && npm install
+	cd apps/api && uv sync --locked --dev
+	cd apps/web && npm ci
 
 db-up:
 	docker compose up -d db
