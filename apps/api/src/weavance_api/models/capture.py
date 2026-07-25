@@ -5,8 +5,8 @@ from sqlalchemy import CheckConstraint, DateTime, Text, func, text
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from weavance_api.capture_limits import MAX_CAPTURE_CHARACTERS
 from weavance_api.database import Base
+from weavance_api.domain.capture import MAX_CAPTURE_CHARACTERS
 
 
 class Capture(Base):

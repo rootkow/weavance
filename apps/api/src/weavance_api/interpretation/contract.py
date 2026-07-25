@@ -13,7 +13,7 @@ from pydantic import (
     model_validator,
 )
 
-from weavance_api.capture_limits import MAX_CAPTURE_CHARACTERS
+from weavance_api.domain.capture import MAX_CAPTURE_CHARACTERS
 
 NonBlankString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 RawCaptureText = Annotated[

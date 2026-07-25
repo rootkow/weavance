@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from weavance_api.capture_limits import MAX_CAPTURE_CHARACTERS
+from weavance_api.domain.capture import MAX_CAPTURE_CHARACTERS
 from weavance_api.models import Capture
 
 

@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from weavance_api.capture_limits import MAX_CAPTURE_CHARACTERS
 from weavance_api.database import get_session
+from weavance_api.domain.capture import MAX_CAPTURE_CHARACTERS
 from weavance_api.main import app
 from weavance_api.models import Capture
 

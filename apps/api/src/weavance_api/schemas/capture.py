@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from weavance_api.capture_limits import MAX_CAPTURE_CHARACTERS
+from weavance_api.domain.capture import MAX_CAPTURE_CHARACTERS
 
 
 class CaptureCreate(BaseModel):
