@@ -5,6 +5,7 @@ from sqlalchemy import CheckConstraint, DateTime, Text, func, text
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from weavance_api.capture_limits import MAX_CAPTURE_CHARACTERS
 from weavance_api.database import Base
 
 
@@ -14,6 +15,10 @@ class Capture(Base):
         CheckConstraint(
             "length(btrim(raw_text)) > 0",
             name="ck_captures_raw_text_not_blank",
+        ),
+        CheckConstraint(
+            f"length(raw_text) <= {MAX_CAPTURE_CHARACTERS}",
+            name="ck_captures_raw_text_length",
         ),
     )
 

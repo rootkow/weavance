@@ -1,13 +1,15 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from weavance_api.capture_limits import MAX_CAPTURE_CHARACTERS
 
 
 class CaptureCreate(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    raw_text: str
+    raw_text: str = Field(max_length=MAX_CAPTURE_CHARACTERS)
 
     @field_validator("raw_text")
     @classmethod

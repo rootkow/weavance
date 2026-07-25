@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 
-import { createCapture } from "./api/captures";
+import { createCapture, MAX_CAPTURE_CHARACTERS } from "./api/captures";
 
 type SubmissionState = "idle" | "submitting" | "success" | "error";
 
@@ -86,6 +86,7 @@ export function App() {
                 onChange={(event) => handleCaptureChange(event.target.value)}
                 placeholder={"Reply to the recruiter\nSchedule a dentist appointment\nFigure out dinner"}
                 rows={9}
+                maxLength={MAX_CAPTURE_CHARACTERS}
                 disabled={submissionState === "submitting"}
                 aria-describedby={
                   submissionState === "error"
@@ -95,7 +96,10 @@ export function App() {
                 autoFocus
               />
               <div className="form-footer">
-                <p id="capture-guidance">Fragments, lists, and full sentences all work.</p>
+                <p id="capture-guidance">
+                  Fragments, lists, and full sentences all work. Up to{" "}
+                  {MAX_CAPTURE_CHARACTERS.toLocaleString()} characters.
+                </p>
                 <button
                   type="submit"
                   className="primary-button"

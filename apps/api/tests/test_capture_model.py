@@ -1,6 +1,9 @@
+import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from weavance_api.capture_limits import MAX_CAPTURE_CHARACTERS
 from weavance_api.models import Capture
 
 
@@ -22,3 +25,16 @@ async def test_capture_round_trip(test_database_url: str) -> None:
     assert stored_capture is not None
     assert stored_capture.raw_text == "Renew my license before Friday"
     assert stored_capture.created_at is not None
+
+
+async def test_capture_length_limit_is_enforced_by_database(
+    test_database_url: str,
+) -> None:
+    engine = create_async_engine(test_database_url, hide_parameters=True)
+    test_session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    with pytest.raises(IntegrityError):
+        async with test_session_factory.begin() as session:
+            session.add(Capture(raw_text="x" * (MAX_CAPTURE_CHARACTERS + 1)))
+
+    await engine.dispose()

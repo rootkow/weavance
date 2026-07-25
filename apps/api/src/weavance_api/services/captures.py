@@ -12,8 +12,8 @@ async def create_capture(session: AsyncSession, *, raw_text: str) -> Capture:
     session.add(capture)
 
     try:
+        await session.flush()
         await session.commit()
-        await session.refresh(capture)
     except SQLAlchemyError:
         await session.rollback()
         logger.exception(
