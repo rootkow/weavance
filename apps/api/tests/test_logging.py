@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 from datetime import UTC, datetime
@@ -15,7 +16,7 @@ from weavance_api.config import Settings
 from weavance_api.database import engine
 from weavance_api.main import app
 from weavance_api.observability import REQUEST_ID_HEADER, configure_logging
-from weavance_api.observability.logging import JsonEventFormatter
+from weavance_api.observability.logging import JsonEventFormatter, get_logger
 from weavance_api.services.captures import create_capture
 
 
@@ -125,6 +126,42 @@ def test_json_logging_uses_record_creation_time() -> None:
     payload = json.loads(formatter.format(record))
 
     assert payload["timestamp"] == datetime.fromtimestamp(record.created, UTC).isoformat()
+
+
+def test_json_logging_formats_normal_event_without_exception() -> None:
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(JsonEventFormatter(environment="test"))
+    standard_logger = logging.getLogger("weavance_api.test.normal_event")
+    standard_logger.handlers = [handler]
+    standard_logger.propagate = False
+
+    get_logger(standard_logger.name).info("capture.created", capture_id="capture-123")
+
+    payload = json.loads(stream.getvalue())
+
+    assert payload["event"] == "capture.created"
+    assert payload["capture_id"] == "capture-123"
+    assert "exception" not in payload
+
+
+def test_json_logging_formats_exception_event_with_traceback() -> None:
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(JsonEventFormatter(environment="test"))
+    standard_logger = logging.getLogger("weavance_api.test.exception_event")
+    standard_logger.handlers = [handler]
+    standard_logger.propagate = False
+
+    try:
+        raise ValueError("database unavailable")
+    except ValueError:
+        get_logger(standard_logger.name).exception("capture.create.failed")
+
+    payload = json.loads(stream.getvalue())
+
+    assert payload["event"] == "capture.create.failed"
+    assert "ValueError: database unavailable" in payload["exception"]
 
 
 def test_configure_logging_normalizes_uvicorn_loggers() -> None:
