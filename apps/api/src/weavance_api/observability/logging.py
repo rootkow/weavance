@@ -100,7 +100,7 @@ class EventLogger:
         event: str,
         fields: Mapping[str, object],
         *,
-        exc_info: bool = False,
+        exc_info: bool | None = None,
     ) -> None:
         self._logger.log(
             level,
@@ -147,7 +147,7 @@ class _EventFormatter(logging.Formatter):
             output_key = f"field_{key}" if key in _RESERVED_KEYS else key
             data[output_key] = value
 
-        if record.exc_info is not None:
+        if record.exc_info:
             data["exception"] = self.formatException(record.exc_info)
         return data
 

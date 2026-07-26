@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime, time
 from uuid import UUID, uuid4
 
 import pytest
@@ -101,6 +101,19 @@ async def test_fake_interpreter_satisfies_provider_neutral_contract() -> None:
     assert fake.requests == [request]
 
 
+def test_interpretation_request_preserves_original_capture_text() -> None:
+    raw_text = "  Renew my license before Friday\nCall the dentist  "
+
+    request = InterpretationRequest(
+        capture_id=uuid4(),
+        raw_text=raw_text,
+        reference_time=datetime.fromisoformat("2026-07-23T09:00:00-04:00"),
+        time_zone="America/Detroit",
+    )
+
+    assert request.raw_text == raw_text
+
+
 def test_unknown_subjective_values_are_omitted() -> None:
     capture_id = uuid4()
     provenance = user_text_provenance("Clean the kitchen")
@@ -161,6 +174,26 @@ def test_contract_rejects_naive_reference_time() -> None:
             raw_text="Send the form tomorrow",
             reference_time=datetime(2026, 7, 23, 9, 0),
             time_zone="America/Detroit",
+        )
+
+
+def test_contract_rejects_reference_time_with_mismatched_time_zone() -> None:
+    with pytest.raises(ValidationError, match="UTC offset must match time_zone"):
+        InterpretationRequest(
+            capture_id=uuid4(),
+            raw_text="Send the form tomorrow",
+            reference_time=datetime.fromisoformat("2026-07-23T09:00:00-07:00"),
+            time_zone="America/Detroit",
+        )
+
+
+def test_deadline_rejects_timezone_aware_local_time() -> None:
+    with pytest.raises(ValidationError, match="local_time must not include a timezone"):
+        DeadlineObservation(
+            date=date(2026, 7, 24),
+            local_time=time(17, 0, tzinfo=UTC),
+            time_zone="America/Detroit",
+            provenance=user_text_provenance("before 5 PM Friday"),
         )
 
 

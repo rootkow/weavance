@@ -13,7 +13,13 @@ from pydantic import (
     model_validator,
 )
 
+from weavance_api.domain.capture import MAX_CAPTURE_CHARACTERS
+
 NonBlankString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+RawCaptureText = Annotated[
+    str,
+    StringConstraints(min_length=1, max_length=MAX_CAPTURE_CHARACTERS),
+]
 Confidence = Annotated[float, Field(ge=0.0, le=1.0)]
 PositiveMinutes = Annotated[int, Field(ge=1)]
 
@@ -47,9 +53,16 @@ class Provenance(ContractModel):
 
 class InterpretationRequest(ContractModel):
     capture_id: UUID
-    raw_text: NonBlankString
+    raw_text: RawCaptureText
     reference_time: datetime
     time_zone: NonBlankString
+
+    @field_validator("raw_text")
+    @classmethod
+    def raw_text_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("raw_text must not be blank")
+        return value
 
     @field_validator("reference_time")
     @classmethod
@@ -67,12 +80,27 @@ class InterpretationRequest(ContractModel):
             raise ValueError("time_zone must be a valid IANA time zone") from exc
         return value
 
+    @model_validator(mode="after")
+    def reference_time_must_match_time_zone(self) -> "InterpretationRequest":
+        time_zone = ZoneInfo(self.time_zone)
+        expected_offset = self.reference_time.astimezone(time_zone).utcoffset()
+        if self.reference_time.utcoffset() != expected_offset:
+            raise ValueError("reference_time UTC offset must match time_zone")
+        return self
+
 
 class DeadlineObservation(ContractModel):
     date: date
     local_time: time | None = None
     time_zone: NonBlankString
     provenance: Provenance
+
+    @field_validator("local_time")
+    @classmethod
+    def local_time_must_not_include_timezone(cls, value: time | None) -> time | None:
+        if value is not None and value.tzinfo is not None:
+            raise ValueError("local_time must not include a timezone")
+        return value
 
     @field_validator("time_zone")
     @classmethod

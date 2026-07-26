@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from weavance_api.database import get_session
+from weavance_api.domain.capture import MAX_CAPTURE_CHARACTERS
 from weavance_api.main import app
 from weavance_api.models import Capture
 
@@ -79,3 +80,30 @@ async def test_create_capture_rejects_blank_text(
         response = await client.post("/captures", json={"raw_text": " \n\t "})
 
     assert response.status_code == 422
+
+
+async def test_create_capture_rejects_text_over_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mock_session = AsyncMock(spec=AsyncSession)
+
+    async def override_get_session() -> AsyncIterator[AsyncSession]:
+        yield mock_session
+
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        get_session,
+        override_get_session,
+    )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        response = await client.post(
+            "/captures",
+            json={"raw_text": "x" * (MAX_CAPTURE_CHARACTERS + 1)},
+        )
+
+    assert response.status_code == 422
+    mock_session.add.assert_not_called()

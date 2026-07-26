@@ -30,6 +30,9 @@ Install dependencies:
 make install
 ```
 
+The Make targets prefer an active virtual environment, including one managed by
+`pyenv-virtualenv`. When no virtual environment is active, uv uses `apps/api/.venv`.
+
 Start PostgreSQL and apply the schema:
 
 ```bash

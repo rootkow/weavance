@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 from datetime import UTC, datetime
@@ -7,19 +8,25 @@ from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from weavance_api import PACKAGE_NAME, __version__
 from weavance_api.config import Settings
+from weavance_api.database import engine
 from weavance_api.main import app
 from weavance_api.observability import REQUEST_ID_HEADER, configure_logging
-from weavance_api.observability.logging import JsonEventFormatter
+from weavance_api.observability.logging import JsonEventFormatter, get_logger
 from weavance_api.services.captures import create_capture
 
 
 def test_runtime_version_comes_from_package_metadata() -> None:
     assert __version__ == version(PACKAGE_NAME)
     assert app.version == __version__
+
+
+def test_database_engine_hides_statement_parameters() -> None:
+    assert engine.sync_engine.hide_parameters is True
 
 
 async def test_request_log_uses_and_returns_correlation_id(
@@ -121,6 +128,44 @@ def test_json_logging_uses_record_creation_time() -> None:
     assert payload["timestamp"] == datetime.fromtimestamp(record.created, UTC).isoformat()
 
 
+def test_json_logging_formats_normal_event_without_exception() -> None:
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(JsonEventFormatter(environment="test"))
+    standard_logger = logging.getLogger("weavance_api.test.normal_event")
+    standard_logger.handlers = [handler]
+    standard_logger.setLevel(logging.INFO)
+    standard_logger.propagate = False
+
+    get_logger(standard_logger.name).info("capture.created", capture_id="capture-123")
+
+    payload = json.loads(stream.getvalue())
+
+    assert payload["event"] == "capture.created"
+    assert payload["capture_id"] == "capture-123"
+    assert "exception" not in payload
+
+
+def test_json_logging_formats_exception_event_with_traceback() -> None:
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(JsonEventFormatter(environment="test"))
+    standard_logger = logging.getLogger("weavance_api.test.exception_event")
+    standard_logger.handlers = [handler]
+    standard_logger.setLevel(logging.INFO)
+    standard_logger.propagate = False
+
+    try:
+        raise ValueError("database unavailable")
+    except ValueError:
+        get_logger(standard_logger.name).exception("capture.create.failed")
+
+    payload = json.loads(stream.getvalue())
+
+    assert payload["event"] == "capture.create.failed"
+    assert "ValueError: database unavailable" in payload["exception"]
+
+
 def test_configure_logging_normalizes_uvicorn_loggers() -> None:
     configure_logging(Settings(environment="test", log_format="json"))
 
@@ -143,10 +188,10 @@ async def test_capture_event_contains_metadata_without_original_text(
     session = AsyncMock(spec=AsyncSession)
     capture_id = uuid4()
 
-    async def assign_database_values(capture: object) -> None:
+    def assign_database_values(capture: object) -> None:
         capture.id = capture_id  # type: ignore[attr-defined]
 
-    session.refresh.side_effect = assign_database_values
+    session.add.side_effect = assign_database_values
     raw_text = "  Renew my license before Friday  "
 
     with caplog.at_level(logging.INFO):
@@ -163,3 +208,15 @@ async def test_capture_event_contains_metadata_without_original_text(
         "character_count": len(raw_text),
     }
     assert raw_text not in capture_record.getMessage()
+
+
+async def test_capture_failure_rolls_back_transaction() -> None:
+    session = AsyncMock(spec=AsyncSession)
+    session.commit.side_effect = SQLAlchemyError("database unavailable")
+
+    with pytest.raises(SQLAlchemyError, match="database unavailable"):
+        await create_capture(session, raw_text="Call the dentist")
+
+    session.flush.assert_awaited_once()
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()

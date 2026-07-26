@@ -32,13 +32,17 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save brain dump" }));
 
     expect(await screen.findByText("Your thoughts are saved.")).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith("/captures", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ raw_text: rawText }),
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/captures",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ raw_text: rawText }),
+        signal: expect.any(AbortSignal),
+      }),
+    );
   });
 
   it("keeps the draft available when saving fails", async () => {
@@ -105,5 +109,28 @@ describe("App", () => {
 
     expect(submitButton).toBeDisabled();
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Brain dump")).toHaveAttribute("maxLength", "50000");
+  });
+
+  it("keeps the draft available when the API response is malformed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ id: "capture-with-missing-fields" }), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    render(<App />);
+
+    const textArea = screen.getByLabelText("Brain dump");
+    fireEvent.change(textArea, {
+      target: { value: "Call the dentist" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save brain dump" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your words are still here.");
+    expect(textArea).toHaveValue("Call the dentist");
   });
 });
