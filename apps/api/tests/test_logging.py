@@ -134,6 +134,7 @@ def test_json_logging_formats_normal_event_without_exception() -> None:
     handler.setFormatter(JsonEventFormatter(environment="test"))
     standard_logger = logging.getLogger("weavance_api.test.normal_event")
     standard_logger.handlers = [handler]
+    standard_logger.setLevel(logging.INFO)
     standard_logger.propagate = False
 
     get_logger(standard_logger.name).info("capture.created", capture_id="capture-123")
@@ -151,6 +152,7 @@ def test_json_logging_formats_exception_event_with_traceback() -> None:
     handler.setFormatter(JsonEventFormatter(environment="test"))
     standard_logger = logging.getLogger("weavance_api.test.exception_event")
     standard_logger.handlers = [handler]
+    standard_logger.setLevel(logging.INFO)
     standard_logger.propagate = False
 
     try:
