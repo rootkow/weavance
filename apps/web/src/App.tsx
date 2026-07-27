@@ -10,7 +10,13 @@ import {
   type TaskProposal,
 } from "./api/interpretations";
 
-type Screen = "loading" | "capture" | "interpreting" | "review" | "task-list";
+type Screen =
+  | "loading"
+  | "capture"
+  | "interpreting"
+  | "review"
+  | "saved"
+  | "task-list";
 type RequestState = "idle" | "submitting" | "error";
 
 function toReviewedTask(task: TaskProposal): ReviewedTask {
@@ -41,7 +47,7 @@ export function App() {
       .then((confirmed) => {
         setConfirmedInterpretations(confirmed);
         setTaskListLoadFailed(false);
-        setScreen(confirmed.length > 0 ? "task-list" : "capture");
+        setScreen("capture");
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -95,7 +101,7 @@ export function App() {
         ),
         confirmed,
       ]);
-      setScreen("task-list");
+      setScreen("saved");
       setRequestState("idle");
     } catch {
       setRequestState("error");
@@ -189,12 +195,20 @@ export function App() {
 
             {confirmedTasks.length > 0 && (
               <div className="existing-tasks-note">
-                <strong>
-                  {confirmedTasks.length} existing{" "}
-                  {confirmedTasks.length === 1 ? "task is" : "tasks are"} still on your
-                  list.
-                </strong>
-                <p>This brain dump will add to them after your review.</p>
+                <div>
+                  <strong>
+                    {confirmedTasks.length} existing{" "}
+                    {confirmedTasks.length === 1 ? "task is" : "tasks are"} safely stored.
+                  </strong>
+                  <p>This brain dump will add to them after your review.</p>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setScreen("task-list")}
+                >
+                  View all tasks
+                </button>
               </div>
             )}
 
@@ -460,6 +474,43 @@ export function App() {
           </form>
         )}
 
+        {screen === "saved" && (
+          <div className="success-state" aria-live="polite">
+            <div className="success-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="m6 12 4 4 8-8" />
+              </svg>
+            </div>
+            <p className="eyebrow">Review saved</p>
+            <h1 id="page-title">That’s safely added.</h1>
+            <p className="lede">
+              {reviewedTasks.length === 0
+                ? "Nothing actionable was added, and your original words are still preserved."
+                : `${reviewedTasks.length} ${
+                    reviewedTasks.length === 1 ? "task was" : "tasks were"
+                  } added without changing anything you saved earlier.`}
+            </p>
+            <div className="success-actions">
+              <button
+                type="button"
+                className="primary-button"
+                onClick={startAnotherCapture}
+              >
+                Add another brain dump
+              </button>
+              {confirmedTasks.length > 0 && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setScreen("task-list")}
+                >
+                  View all tasks
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {screen === "task-list" && (
           <div className="task-list-view" aria-live="polite">
             <div className="task-list-intro">
@@ -541,7 +592,7 @@ export function App() {
                 className="primary-button"
                 onClick={startAnotherCapture}
               >
-                Add another brain dump
+                Back to brain dump
               </button>
             </div>
           </div>

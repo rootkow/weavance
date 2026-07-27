@@ -377,6 +377,14 @@ textarea::placeholder {
 }
 
 .success-state .primary-button {
+  margin-top: 0;
+}
+
+.success-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
   margin-top: 1.7rem;
 }
 
@@ -463,6 +471,10 @@ textarea::placeholder {
 }
 
 .existing-tasks-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 1.25rem;
   border: 1px solid rgba(117, 221, 207, 0.18);
   border-radius: 0.9rem;
@@ -803,7 +815,9 @@ textarea::placeholder {
   .review-intro,
   .review-footer,
   .task-list-intro,
-  .task-list-footer {
+  .task-list-footer,
+  .existing-tasks-note,
+  .success-actions {
     align-items: stretch;
     flex-direction: column;
   }
@@ -821,6 +835,12 @@ textarea::placeholder {
   }
 
   .task-list-footer .primary-button {
+    width: 100%;
+  }
+
+  .existing-tasks-note .secondary-button,
+  .success-actions .primary-button,
+  .success-actions .secondary-button {
     width: 100%;
   }
 

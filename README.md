@@ -26,13 +26,14 @@ The current vertical slice can:
 - create and persist a versioned proposal through a transparent line-based fallback interpreter
 - let the user add, edit, or remove proposed tasks and starting actions
 - preserve the reviewed result as a separate confirmed interpretation version
-- present the latest confirmed tasks from every brain dump as one cumulative task list
-- restore that task list from PostgreSQL when the web application loads
+- restore the latest confirmed tasks from every brain dump when the web application loads
+- present that cumulative task list only when the user explicitly opens it
 
-The cumulative list is a current-state read model, not a full capture or interpretation-history
-surface. The fallback intentionally performs only a modest first pass; it is replaceable through
-the existing interpreter contract. Task lifecycle, capacity inference, policy, recommendation
-selection, and the main one-action execution screen are still planned.
+The cumulative list is a secondary, user-opened current-state read model, not the default
+experience or a full capture or interpretation-history surface. The fallback intentionally
+performs only a modest first pass; it is replaceable through the existing interpreter contract.
+Task lifecycle, capacity inference, policy, recommendation selection, and the main one-action
+execution screen are still planned.
 
 ## Local development
 

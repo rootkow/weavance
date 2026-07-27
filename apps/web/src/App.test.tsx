@@ -148,8 +148,10 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Looks right" }));
 
     expect(
-      await screen.findByRole("heading", { name: "Here’s what’s on your plate." }),
+      await screen.findByRole("heading", { name: "That’s safely added." }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Update my resume" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View all tasks" })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenNthCalledWith(
       4,
       `/captures/${capture.id}/interpretations/${interpretation.id}/confirm`,
@@ -320,7 +322,7 @@ describe("App", () => {
     });
   });
 
-  it("loads the current confirmed task list when the app starts", async () => {
+  it("loads confirmed tasks without displaying the full list by default", async () => {
     const confirmedInterpretation = {
       ...interpretation,
       id: "2ed72150-36e9-4682-ad27-db1031b77de9",
@@ -333,6 +335,13 @@ describe("App", () => {
     );
 
     render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "What’s taking up space right now?" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Update my resume" })).not.toBeInTheDocument();
+    expect(screen.getByText("2 existing tasks are safely stored.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
 
     expect(
       await screen.findByRole("heading", { name: "Here’s what’s on your plate." }),
@@ -394,11 +403,11 @@ describe("App", () => {
 
     await submitBrainDump();
     fireEvent.click(screen.getByRole("button", { name: "Looks right" }));
-    await screen.findByRole("heading", { name: "Here’s what’s on your plate." });
+    await screen.findByRole("heading", { name: "That’s safely added." });
     fireEvent.click(screen.getByRole("button", { name: "Add another brain dump" }));
 
     expect(
-      screen.getByText("2 existing tasks are still on your list."),
+      screen.getByText("2 existing tasks are safely stored."),
     ).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Brain dump"), {
       target: { value: secondCapture.raw_text },
@@ -410,6 +419,10 @@ describe("App", () => {
       screen.getByText("Your 2 existing tasks stay on your list while you review these."),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Looks right" }));
+
+    await screen.findByRole("heading", { name: "That’s safely added." });
+    expect(screen.queryByRole("heading", { name: "Update my resume" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
 
     await screen.findByText("3 tasks");
     expect(screen.getByRole("heading", { name: "Update my resume" })).toBeInTheDocument();
