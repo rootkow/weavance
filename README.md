@@ -14,13 +14,28 @@ Routines can flex with real life. Weavance treats changes in momentum as useful 
 - `apps/web`: React and TypeScript application
 - `docs`: Product brief, MVP boundaries, architecture, and decisions
 
+## Implementation status
+
+The current vertical slice can:
+
+- accept a brain dump through the web application
+- preserve its exact text in PostgreSQL through `POST /captures`
+- reject blank captures and captures longer than 50,000 characters
+- correlate requests through privacy-aware structured logs
+- represent provider-neutral interpretation requests and proposals through a tested typed contract
+
+The interpretation contract is not connected to the capture endpoint yet. There is no runtime
+interpreter, versioned interpretation persistence, capture history endpoint, or UI for reviewing
+the collected information. The next product increment is interpretation orchestration and
+versioned proposal persistence, followed by the user confirmation and correction experience.
+
 ## Local development
 
 Requirements:
 
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/)
-- Node.js 22+
+- Node.js 24+
 - npm 10+
 - Docker with Compose
 
@@ -32,6 +47,15 @@ make install
 
 The Make targets prefer an active virtual environment, including one managed by
 `pyenv-virtualenv`. When no virtual environment is active, uv uses `apps/api/.venv`.
+
+Configure the web application to reach the locally running API:
+
+```bash
+cp apps/web/.env.example apps/web/.env
+```
+
+The API defaults work with the Compose database. To override them, copy
+`apps/api/.env.example` to `apps/api/.env` and edit the app-specific values.
 
 Start PostgreSQL and apply the schema:
 
@@ -49,11 +73,23 @@ make web-dev
 
 Then open `http://localhost:5173`. The API health endpoint is available at `http://localhost:8000/health`.
 
-Run all checks:
+Run the local lint, unit-test, and build checks:
 
 ```bash
 make check
 ```
+
+PostgreSQL integration tests require a disposable test database. Create it once, then provide its
+URL when running the checks:
+
+```bash
+docker compose exec db createdb -U weavance weavance_test
+WEAVANCE_TEST_DATABASE_URL=postgresql+asyncpg://weavance:weavance@localhost:5432/weavance_test make check
+```
+
+The integration-test fixture applies all migrations before the tests and downgrades the test
+database back to an empty schema afterward. GitHub Actions always runs these tests against its own
+PostgreSQL service.
 
 Docker Compose is also available:
 
@@ -78,10 +114,19 @@ Logging can be configured with:
 logs contain IDs and bounded metadata; they do not contain brain dumps or other user-authored
 content.
 
-## Current scope
+## Current API
 
-Milestone 0 established the application shell and delivery tooling. Milestone 1 begins with
-PostgreSQL persistence for immutable brain-dump captures, followed by a typed interpretation
-boundary. Model providers will propose subjective interpretations; deterministic policy will
-enforce user intent and application invariants. See [the MVP scope](docs/mvp.md) for the planned
-vertical slice.
+- `GET /health` returns service status and the configured environment.
+- `POST /captures` stores a nonblank brain dump of at most 50,000 characters and returns its ID,
+  exact original text, and creation time.
+- `/docs` exposes FastAPI's generated OpenAPI interface during local development.
+
+No read, list, update, or delete capture endpoints exist yet.
+
+## Documentation
+
+- [Product brief](docs/product-brief.md): problem, principles, initial user, and success signals
+- [MVP scope](docs/mvp.md): implementation progress, first vertical slice, and non-goals
+- [Architecture](docs/architecture.md): current boundaries and target request flow
+- [Interpretation contract](docs/interpretation-contract.md): provider-neutral typed interface
+- [Architecture decisions](docs/decisions): accepted and superseded ADRs
