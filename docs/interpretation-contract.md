@@ -5,8 +5,9 @@ tasks and actions. An interpreter can be backed by a hosted model, a local model
 fallback, or a test fake while the rest of the application consumes the same contract.
 
 The immutable Pydantic models and `CaptureInterpreter` protocol are implemented and tested. The
-capture endpoint does not invoke an interpreter yet, and interpretation proposals are not yet
-persisted or exposed through the API.
+runtime orchestration invokes a deliberately modest line-based fallback through that protocol,
+validates its proposal, and stores every interpretation version in PostgreSQL. A future hosted or
+local model can replace the fallback without changing the orchestration boundary.
 
 ## Input
 
@@ -63,12 +64,17 @@ values should not be treated equally.
 These guarantees describe contract structure. Future policy and user corrections determine which
 proposals become authoritative application state.
 
-## Orchestration responsibilities
+## Orchestration behavior
 
-The future orchestration layer must:
+The orchestration layer:
 
 - construct the request from the persisted `Capture` without changing its text
 - verify that the returned proposal references the requested capture
 - validate the complete proposal before persistence
 - append a new versioned interpretation instead of overwriting an earlier proposal
-- preserve enough interpreter and schema information to explain and replay the result
+- preserve the request time zone and reference time alongside interpreter and schema information
+- serialize version assignment per capture so concurrent requests cannot claim the same version
+
+The structured review writes user edits as a new confirmed version. Changed and newly added fields
+carry direct user-correction provenance; unchanged values retain their original provenance. Removed
+tasks remain visible in the earlier proposal rather than being deleted from history.
