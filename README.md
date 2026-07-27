@@ -140,6 +140,7 @@ and deletion endpoints are also not implemented.
 
 - [Product brief](docs/product-brief.md): problem, principles, initial user, and success signals
 - [MVP scope](docs/mvp.md): implementation progress, first vertical slice, and non-goals
+- [Backlog](docs/backlog.md): identified product and documentation work not yet scheduled
 - [Architecture](docs/architecture.md): current boundaries and target request flow
 - [Interpretation contract](docs/interpretation-contract.md): provider-neutral typed interface
 - [Architecture decisions](docs/decisions): accepted and superseded ADRs
