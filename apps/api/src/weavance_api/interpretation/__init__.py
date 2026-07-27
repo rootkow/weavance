@@ -11,12 +11,14 @@ from weavance_api.interpretation.contract import (
     Provenance,
     TaskProposal,
 )
+from weavance_api.interpretation.deterministic import DeterministicCaptureInterpreter
 from weavance_api.interpretation.interpreter import CaptureInterpreter
 
 __all__ = [
     "ActionProposal",
     "CaptureInterpreter",
     "DeadlineObservation",
+    "DeterministicCaptureInterpreter",
     "DerivationMethod",
     "DurationEstimate",
     "EvidenceSource",

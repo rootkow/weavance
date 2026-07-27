@@ -23,11 +23,14 @@ The current vertical slice can:
 - reject blank captures and captures longer than 50,000 characters
 - correlate requests through privacy-aware structured logs
 - represent provider-neutral interpretation requests and proposals through a tested typed contract
+- create and persist a versioned proposal through a transparent line-based fallback interpreter
+- let the user add, edit, or remove proposed tasks and starting actions
+- preserve the reviewed result as a separate confirmed interpretation version
 
-The interpretation contract is not connected to the capture endpoint yet. There is no runtime
-interpreter, versioned interpretation persistence, capture history endpoint, or UI for reviewing
-the collected information. The next product increment is interpretation orchestration and
-versioned proposal persistence, followed by the user confirmation and correction experience.
+There is no capture or interpretation history endpoint yet. The fallback intentionally performs
+only a modest first pass; it is replaceable through the existing interpreter contract. Capacity
+inference, policy, recommendation selection, and the main one-action execution screen are still
+planned.
 
 ## Local development
 
@@ -119,9 +122,13 @@ content.
 - `GET /health` returns service status and the configured environment.
 - `POST /captures` stores a nonblank brain dump of at most 50,000 characters and returns its ID,
   exact original text, and creation time.
+- `POST /captures/{capture_id}/interpretations` creates and stores a versioned proposal using the
+  configured interpreter.
+- `POST /captures/{capture_id}/interpretations/{interpretation_id}/confirm` stores reviewed task
+  and action corrections as a new confirmed version.
 - `/docs` exposes FastAPI's generated OpenAPI interface during local development.
 
-No read, list, update, or delete capture endpoints exist yet.
+No history, list, update, or delete endpoints exist yet.
 
 ## Documentation
 
