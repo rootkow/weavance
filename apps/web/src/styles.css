@@ -590,6 +590,9 @@ textarea::placeholder {
 .task-card input:focus {
   border-color: #58bdb2;
   box-shadow: 0 0 0 4px rgba(74, 195, 181, 0.08);
+}
+
+.task-card input:focus:not(:focus-visible) {
   outline: none;
 }
 

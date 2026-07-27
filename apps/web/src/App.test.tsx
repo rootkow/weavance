@@ -431,4 +431,73 @@ describe("App", () => {
       screen.getByRole("heading", { name: "Schedule the dentist" }),
     ).toBeInTheDocument();
   });
+
+  it("preserves capture ordering when replacing a confirmed interpretation", async () => {
+    const firstConfirmation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    const secondCapture = {
+      id: "215a7c0f-42bb-4752-8654-cc06e247328d",
+      raw_text: "Schedule the dentist",
+      created_at: "2026-07-27T21:00:00Z",
+    };
+    const secondConfirmation = {
+      ...firstConfirmation,
+      id: "5596b7c9-2e3e-485f-97eb-e23d8b371896",
+      capture_id: secondCapture.id,
+      proposal: {
+        ...firstConfirmation.proposal,
+        capture_id: secondCapture.id,
+        tasks: [
+          {
+            ...firstConfirmation.proposal.tasks[0],
+            id: "a2fa9ea7-b55c-4f0e-a74c-83e35ca552d8",
+            title: "Schedule the dentist",
+            actions: [
+              {
+                ...firstConfirmation.proposal.tasks[0].actions[0],
+                id: "fddff5a1-b392-49d9-90fd-146bc011b4d2",
+                description: "Call the dentist",
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const updatedFirstConfirmation = {
+      ...firstConfirmation,
+      id: "25e58f53-180d-475d-8025-c43eb78e2bb7",
+      version: 3,
+      proposal: {
+        ...firstConfirmation.proposal,
+        tasks: [
+          {
+            ...firstConfirmation.proposal.tasks[0],
+            title: "Update backend resume bullets",
+          },
+          firstConfirmation.proposal.tasks[1],
+        ],
+      },
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse([firstConfirmation, secondConfirmation], 200))
+      .mockResolvedValueOnce(jsonResponse(capture))
+      .mockResolvedValueOnce(jsonResponse(interpretation))
+      .mockResolvedValueOnce(jsonResponse(updatedFirstConfirmation));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await submitBrainDump();
+    fireEvent.click(screen.getByRole("button", { name: "Looks right" }));
+    await screen.findByRole("heading", { name: "That’s safely added." });
+    fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
+
+    expect(
+      screen.getAllByRole("heading", { level: 2 }).map(({ textContent }) => textContent),
+    ).toEqual(["Update backend resume bullets", "Do laundry", "Schedule the dentist"]);
+  });
 });

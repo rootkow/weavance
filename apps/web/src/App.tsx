@@ -95,12 +95,16 @@ export function App() {
     setRequestState("submitting");
     try {
       const confirmed = await confirmInterpretation(interpretation, reviewedTasks);
-      setConfirmedInterpretations((interpretations) => [
-        ...interpretations.filter(
-          (existing) => existing.capture_id !== confirmed.capture_id,
-        ),
-        confirmed,
-      ]);
+      setConfirmedInterpretations((interpretations) => {
+        const existingIndex = interpretations.findIndex(
+          (existing) => existing.capture_id === confirmed.capture_id,
+        );
+        if (existingIndex === -1) return [...interpretations, confirmed];
+
+        return interpretations.map((existing, index) =>
+          index === existingIndex ? confirmed : existing,
+        );
+      });
       setScreen("saved");
       setRequestState("idle");
     } catch {
