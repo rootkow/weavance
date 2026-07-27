@@ -26,11 +26,13 @@ The current vertical slice can:
 - create and persist a versioned proposal through a transparent line-based fallback interpreter
 - let the user add, edit, or remove proposed tasks and starting actions
 - preserve the reviewed result as a separate confirmed interpretation version
+- present the latest confirmed tasks from every brain dump as one cumulative task list
+- restore that task list from PostgreSQL when the web application loads
 
-There is no capture or interpretation history endpoint yet. The fallback intentionally performs
-only a modest first pass; it is replaceable through the existing interpreter contract. Capacity
-inference, policy, recommendation selection, and the main one-action execution screen are still
-planned.
+The cumulative list is a current-state read model, not a full capture or interpretation-history
+surface. The fallback intentionally performs only a modest first pass; it is replaceable through
+the existing interpreter contract. Task lifecycle, capacity inference, policy, recommendation
+selection, and the main one-action execution screen are still planned.
 
 ## Local development
 
@@ -126,9 +128,12 @@ content.
   configured interpreter.
 - `POST /captures/{capture_id}/interpretations/{interpretation_id}/confirm` stores reviewed task
   and action corrections as a new confirmed version.
+- `GET /interpretations/confirmed` returns the latest confirmed interpretation for each capture,
+  ordered by capture creation time.
 - `/docs` exposes FastAPI's generated OpenAPI interface during local development.
 
-No history, list, update, or delete endpoints exist yet.
+There are no raw-capture or complete interpretation-history endpoints yet. Task update, completion,
+and deletion endpoints are also not implemented.
 
 ## Documentation
 

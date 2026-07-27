@@ -462,6 +462,27 @@ textarea::placeholder {
   gap: 1.5rem;
 }
 
+.existing-tasks-note {
+  margin-bottom: 1.25rem;
+  border: 1px solid rgba(117, 221, 207, 0.18);
+  border-radius: 0.9rem;
+  padding: 0.85rem 1rem;
+  color: #cdd9e6;
+  background: rgba(58, 178, 164, 0.06);
+}
+
+.existing-tasks-note strong {
+  font-size: 0.82rem;
+}
+
+.existing-tasks-note p,
+.existing-review-note {
+  margin-top: 0.25rem;
+  color: #8291a7;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 .review-intro {
   display: flex;
   align-items: flex-start;
@@ -658,6 +679,78 @@ textarea::placeholder {
   line-height: 1.5;
 }
 
+.task-list-view {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.task-list-intro,
+.task-list-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.task-list-intro h1 {
+  max-width: 20ch;
+}
+
+.current-task-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.current-task-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem;
+  border: 1px solid rgba(145, 158, 184, 0.16);
+  border-radius: 1rem;
+  padding: 1.1rem;
+  background: rgba(7, 13, 25, 0.46);
+}
+
+.current-task-card h2 {
+  color: #edf2f8;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.current-task-card p {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.45rem;
+  color: #abb6c7;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.current-task-card p > span {
+  color: #69788f;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.current-task-card .task-signals {
+  margin-top: 0.7rem;
+}
+
+.task-list-footer {
+  align-items: center;
+  border-top: 1px solid rgba(145, 158, 184, 0.12);
+  padding-top: 1.2rem;
+}
+
+.task-list-footer > p {
+  max-width: 30rem;
+  color: #6f7d93;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
 .success-mark {
   width: 4rem;
   height: 4rem;
@@ -708,7 +801,9 @@ textarea::placeholder {
   }
 
   .review-intro,
-  .review-footer {
+  .review-footer,
+  .task-list-intro,
+  .task-list-footer {
     align-items: stretch;
     flex-direction: column;
   }
@@ -722,6 +817,10 @@ textarea::placeholder {
   }
 
   .review-footer .primary-button {
+    width: 100%;
+  }
+
+  .task-list-footer .primary-button {
     width: 100%;
   }
 

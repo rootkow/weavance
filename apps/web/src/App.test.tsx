@@ -77,12 +77,13 @@ function jsonResponse(body: unknown, status = 201): Response {
 function successfulFlowFetch() {
   return vi
     .fn()
+    .mockResolvedValueOnce(jsonResponse([], 200))
     .mockResolvedValueOnce(jsonResponse(capture))
     .mockResolvedValueOnce(jsonResponse(interpretation));
 }
 
 async function submitBrainDump() {
-  fireEvent.change(screen.getByLabelText("Brain dump"), {
+  fireEvent.change(await screen.findByLabelText("Brain dump"), {
     target: { value: capture.raw_text },
   });
   fireEvent.click(screen.getByRole("button", { name: "Save brain dump" }));
@@ -105,7 +106,7 @@ describe("App", () => {
     expect(screen.getByLabelText("Task 2 title")).toHaveValue("Do laundry");
     expect(screen.getByText("2 tasks")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
+      2,
       "/captures",
       expect.objectContaining({
         method: "POST",
@@ -113,7 +114,7 @@ describe("App", () => {
       }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
+      3,
       `/captures/${capture.id}/interpretations`,
       expect.objectContaining({
         method: "POST",
@@ -147,10 +148,10 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Looks right" }));
 
     expect(
-      await screen.findByRole("heading", { name: "Got it. That’s a clearer picture." }),
+      await screen.findByRole("heading", { name: "Here’s what’s on your plate." }),
     ).toBeInTheDocument();
     expect(fetchMock).toHaveBeenNthCalledWith(
-      3,
+      4,
       `/captures/${capture.id}/interpretations/${interpretation.id}/confirm`,
       expect.objectContaining({
         method: "POST",
@@ -188,10 +189,16 @@ describe("App", () => {
   });
 
   it("keeps the draft available when saving the capture fails", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse([], 200))
+        .mockResolvedValueOnce(new Response(null, { status: 503 })),
+    );
     render(<App />);
 
-    const textArea = screen.getByLabelText("Brain dump");
+    const textArea = await screen.findByLabelText("Brain dump");
     fireEvent.change(textArea, {
       target: { value: "Call the dentist" },
     });
@@ -211,12 +218,13 @@ describe("App", () => {
       "fetch",
       vi
         .fn()
+        .mockResolvedValueOnce(jsonResponse([], 200))
         .mockResolvedValueOnce(jsonResponse(capture))
         .mockReturnValueOnce(pendingInterpretation),
     );
     render(<App />);
 
-    fireEvent.change(screen.getByLabelText("Brain dump"), {
+    fireEvent.change(await screen.findByLabelText("Brain dump"), {
       target: { value: capture.raw_text },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save brain dump" }));
@@ -234,13 +242,14 @@ describe("App", () => {
   it("can retry interpretation without losing a successfully saved capture", async () => {
     const fetchMock = vi
       .fn()
+      .mockResolvedValueOnce(jsonResponse([], 200))
       .mockResolvedValueOnce(jsonResponse(capture))
       .mockResolvedValueOnce(new Response(null, { status: 503 }))
       .mockResolvedValueOnce(jsonResponse(interpretation));
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
-    fireEvent.change(screen.getByLabelText("Brain dump"), {
+    fireEvent.change(await screen.findByLabelText("Brain dump"), {
       target: { value: capture.raw_text },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save brain dump" }));
@@ -251,15 +260,15 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: "Here’s what I pulled out." }),
     ).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
-  it("keeps submission unavailable until the brain dump has visible text", () => {
-    const fetchMock = vi.fn();
+  it("keeps submission unavailable until the brain dump has visible text", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse([], 200));
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
-    const submitButton = screen.getByRole("button", { name: "Save brain dump" });
+    const submitButton = await screen.findByRole("button", { name: "Save brain dump" });
     expect(submitButton).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("Brain dump"), {
@@ -267,20 +276,21 @@ describe("App", () => {
     });
 
     expect(submitButton).toBeDisabled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText("Brain dump")).toHaveAttribute("maxLength", "50000");
   });
 
   it("keeps the draft available when the capture response is malformed", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(
-        jsonResponse({ id: "capture-with-missing-fields" }),
-      ),
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse([], 200))
+        .mockResolvedValueOnce(jsonResponse({ id: "capture-with-missing-fields" })),
     );
     render(<App />);
 
-    const textArea = screen.getByLabelText("Brain dump");
+    const textArea = await screen.findByLabelText("Brain dump");
     fireEvent.change(textArea, {
       target: { value: "Call the dentist" },
     });
@@ -308,5 +318,104 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Looks right" })).toBeEnabled();
     });
+  });
+
+  it("loads the current confirmed task list when the app starts", async () => {
+    const confirmedInterpretation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse([confirmedInterpretation], 200)),
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Here’s what’s on your plate." }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Update my resume" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Do laundry" })).toBeInTheDocument();
+    expect(screen.getByText("2 tasks")).toBeInTheDocument();
+  });
+
+  it("adds tasks from another brain dump without replacing the current list", async () => {
+    const firstConfirmation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    const secondCapture = {
+      id: "215a7c0f-42bb-4752-8654-cc06e247328d",
+      raw_text: "Schedule the dentist",
+      created_at: "2026-07-27T21:00:00Z",
+    };
+    const secondInterpretation = {
+      ...interpretation,
+      id: "a46ec3c0-b497-4f24-a795-845016578e97",
+      capture_id: secondCapture.id,
+      version: 1,
+      proposal: {
+        ...interpretation.proposal,
+        capture_id: secondCapture.id,
+        tasks: [
+          {
+            ...interpretation.proposal.tasks[0],
+            id: "a2fa9ea7-b55c-4f0e-a74c-83e35ca552d8",
+            title: "Schedule the dentist",
+            actions: [
+              {
+                ...interpretation.proposal.tasks[0].actions[0],
+                id: "fddff5a1-b392-49d9-90fd-146bc011b4d2",
+                description: "Call the dentist",
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const secondConfirmation = {
+      ...secondInterpretation,
+      id: "5596b7c9-2e3e-485f-97eb-e23d8b371896",
+      version: 2,
+      status: "confirmed",
+    };
+    const fetchMock = successfulFlowFetch()
+      .mockResolvedValueOnce(jsonResponse(firstConfirmation))
+      .mockResolvedValueOnce(jsonResponse(secondCapture))
+      .mockResolvedValueOnce(jsonResponse(secondInterpretation))
+      .mockResolvedValueOnce(jsonResponse(secondConfirmation));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await submitBrainDump();
+    fireEvent.click(screen.getByRole("button", { name: "Looks right" }));
+    await screen.findByRole("heading", { name: "Here’s what’s on your plate." });
+    fireEvent.click(screen.getByRole("button", { name: "Add another brain dump" }));
+
+    expect(
+      screen.getByText("2 existing tasks are still on your list."),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Brain dump"), {
+      target: { value: secondCapture.raw_text },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save brain dump" }));
+
+    await screen.findByRole("heading", { name: "Here’s what I pulled out." });
+    expect(
+      screen.getByText("Your 2 existing tasks stay on your list while you review these."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Looks right" }));
+
+    await screen.findByText("3 tasks");
+    expect(screen.getByRole("heading", { name: "Update my resume" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Do laundry" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Schedule the dentist" }),
+    ).toBeInTheDocument();
   });
 });

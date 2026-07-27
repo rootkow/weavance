@@ -126,6 +126,80 @@ async def test_interpretation_review_is_persisted_as_a_new_version(
     assert records[1].parent_interpretation_id == records[0].id
 
 
+async def test_latest_confirmed_interpretations_include_each_capture_once(
+    monkeypatch: pytest.MonkeyPatch,
+    test_database_url: str,
+) -> None:
+    engine = create_async_engine(test_database_url)
+    test_session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def override_get_session() -> AsyncIterator[AsyncSession]:
+        async with test_session_factory() as session:
+            yield session
+
+    monkeypatch.setitem(app.dependency_overrides, get_session, override_get_session)
+
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
+            initial_response = await client.get("/interpretations/confirmed")
+            initial_ids = {
+                interpretation["id"] for interpretation in initial_response.json()
+            }
+            confirmed_ids: list[str] = []
+            for raw_text in ("Update my resume", "Schedule the dentist"):
+                capture_response = await client.post(
+                    "/captures",
+                    json={"raw_text": raw_text},
+                )
+                capture_id = capture_response.json()["id"]
+                proposal_response = await client.post(
+                    f"/captures/{capture_id}/interpretations",
+                    json={
+                        "reference_time": "2026-07-27T10:00:00-04:00",
+                        "time_zone": "America/Detroit",
+                    },
+                )
+                proposal = proposal_response.json()
+                task = proposal["proposal"]["tasks"][0]
+                confirmation_response = await client.post(
+                    (
+                        f"/captures/{capture_id}/interpretations/"
+                        f"{proposal['id']}/confirm"
+                    ),
+                    json={
+                        "tasks": [
+                            {
+                                "id": task["id"],
+                                "title": task["title"],
+                                "action_id": task["actions"][0]["id"],
+                                "action_description": task["actions"][0]["description"],
+                            }
+                        ]
+                    },
+                )
+                confirmed_ids.append(confirmation_response.json()["id"])
+
+            list_response = await client.get("/interpretations/confirmed")
+    finally:
+        await engine.dispose()
+
+    assert list_response.status_code == 200
+    response_body = list_response.json()
+    new_interpretations = [
+        interpretation
+        for interpretation in response_body
+        if interpretation["id"] not in initial_ids
+    ]
+    assert [interpretation["id"] for interpretation in new_interpretations] == confirmed_ids
+    assert [
+        interpretation["proposal"]["tasks"][0]["title"]
+        for interpretation in new_interpretations
+    ] == ["Update my resume", "Schedule the dentist"]
+
+
 async def test_create_interpretation_rejects_unknown_capture(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -20,7 +20,7 @@ Status: **Complete**
 |---|---|---|
 | 1. Capture and store the original brain dump | Complete | The UI and `POST /captures` preserve exact text in PostgreSQL |
 | 2. Interpret it as typed, versioned task and action proposals | Complete | A replaceable line-based fallback creates validated proposals and PostgreSQL stores every version |
-| 3. Let the user confirm or correct material assumptions | In progress | The structured review supports adding, editing, and removing tasks and first actions; richer interpreted details are not editable yet |
+| 3. Let the user confirm or correct material assumptions | In progress | The structured review supports adding, editing, and removing tasks and first actions, then restores the cumulative confirmed list; richer interpreted details are not editable yet |
 | 4. Infer capacity conservatively | Planned | Uses interaction signals with an optional lightweight check-in |
 | 5. Select one concrete next action | Planned | Runs only over policy-eligible actions |
 | 6. Explain why it was selected | Planned | Uses structured, attributable factors |

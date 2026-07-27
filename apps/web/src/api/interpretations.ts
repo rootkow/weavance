@@ -21,8 +21,12 @@ export interface TaskProposal {
 export interface Interpretation {
   id: string;
   capture_id: string;
+  parent_interpretation_id?: string | null;
   version: number;
   status: "proposed" | "confirmed";
+  reference_time?: string;
+  time_zone?: string;
+  created_at?: string;
   proposal: {
     tasks: TaskProposal[];
   };
@@ -109,6 +113,30 @@ async function interpretationResponse(response: Response): Promise<Interpretatio
   const responseBody: unknown = await response.json();
   if (!isInterpretation(responseBody)) {
     throw new Error("Interpretation response did not match the expected shape");
+  }
+  return responseBody;
+}
+
+export async function listConfirmedInterpretations(
+  signal?: AbortSignal,
+): Promise<Interpretation[]> {
+  const response = await fetch(`${apiBaseUrl}/interpretations/confirmed`, {
+    method: "GET",
+    signal,
+  });
+  if (!response.ok) {
+    throw new Error(`Interpretation request failed with status ${response.status}`);
+  }
+
+  const responseBody: unknown = await response.json();
+  if (
+    !Array.isArray(responseBody) ||
+    !responseBody.every(
+      (interpretation) =>
+        isInterpretation(interpretation) && interpretation.status === "confirmed",
+    )
+  ) {
+    throw new Error("Confirmed interpretations did not match the expected shape");
   }
   return responseBody;
 }

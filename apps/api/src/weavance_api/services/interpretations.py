@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +38,34 @@ class InvalidInterpretationError(Exception):
 
 class StaleInterpretationError(Exception):
     pass
+
+
+async def list_latest_confirmed_interpretations(
+    session: AsyncSession,
+) -> list[Interpretation]:
+    latest_confirmed_versions = (
+        select(
+            Interpretation.capture_id,
+            func.max(Interpretation.version).label("version"),
+        )
+        .where(Interpretation.status == "confirmed")
+        .group_by(Interpretation.capture_id)
+        .subquery()
+    )
+    interpretations = await session.scalars(
+        select(Interpretation)
+        .join(
+            latest_confirmed_versions,
+            and_(
+                Interpretation.capture_id
+                == latest_confirmed_versions.c.capture_id,
+                Interpretation.version == latest_confirmed_versions.c.version,
+            ),
+        )
+        .join(Capture, Capture.id == Interpretation.capture_id)
+        .order_by(Capture.created_at, Capture.id)
+    )
+    return list(interpretations)
 
 
 async def create_interpretation(

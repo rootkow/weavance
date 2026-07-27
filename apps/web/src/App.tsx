@@ -1,15 +1,16 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { createCapture, MAX_CAPTURE_CHARACTERS, type Capture } from "./api/captures";
 import {
   confirmInterpretation,
   createInterpretation,
+  listConfirmedInterpretations,
   type Interpretation,
   type ReviewedTask,
   type TaskProposal,
 } from "./api/interpretations";
 
-type Screen = "capture" | "interpreting" | "review" | "confirmed";
+type Screen = "loading" | "capture" | "interpreting" | "review" | "task-list";
 type RequestState = "idle" | "submitting" | "error";
 
 function toReviewedTask(task: TaskProposal): ReviewedTask {
@@ -26,8 +27,30 @@ export function App() {
   const [capture, setCapture] = useState<Capture | null>(null);
   const [interpretation, setInterpretation] = useState<Interpretation | null>(null);
   const [reviewedTasks, setReviewedTasks] = useState<ReviewedTask[]>([]);
-  const [screen, setScreen] = useState<Screen>("capture");
+  const [confirmedInterpretations, setConfirmedInterpretations] = useState<
+    Interpretation[]
+  >([]);
+  const [screen, setScreen] = useState<Screen>("loading");
   const [requestState, setRequestState] = useState<RequestState>("idle");
+  const [taskListLoadFailed, setTaskListLoadFailed] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void listConfirmedInterpretations(controller.signal)
+      .then((confirmed) => {
+        setConfirmedInterpretations(confirmed);
+        setTaskListLoadFailed(false);
+        setScreen(confirmed.length > 0 ? "task-list" : "capture");
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setTaskListLoadFailed(true);
+        setScreen("capture");
+      });
+
+    return () => controller.abort();
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,8 +88,14 @@ export function App() {
 
     setRequestState("submitting");
     try {
-      await confirmInterpretation(interpretation, reviewedTasks);
-      setScreen("confirmed");
+      const confirmed = await confirmInterpretation(interpretation, reviewedTasks);
+      setConfirmedInterpretations((interpretations) => [
+        ...interpretations.filter(
+          (existing) => existing.capture_id !== confirmed.capture_id,
+        ),
+        confirmed,
+      ]);
+      setScreen("task-list");
       setRequestState("idle");
     } catch {
       setRequestState("error");
@@ -111,6 +140,12 @@ export function App() {
     setRequestState("idle");
   }
 
+  const confirmedTasks = confirmedInterpretations.flatMap((confirmed) =>
+    confirmed.proposal.tasks.map((task) => ({
+      ...task,
+      captureId: confirmed.capture_id,
+    })),
+  );
   const reviewIsValid = reviewedTasks.every(
     (task) => task.title.trim() && task.action_description.trim(),
   );
@@ -131,6 +166,16 @@ export function App() {
         className={`capture-card ${screen === "review" ? "review-workspace" : ""}`}
         aria-labelledby="page-title"
       >
+        {screen === "loading" && (
+          <div className="processing-state" aria-live="polite">
+            <div className="processing-orbit" aria-hidden="true">
+              <span />
+            </div>
+            <p className="eyebrow">Picking up where you left off</p>
+            <h1 id="page-title">Loading your task list…</h1>
+          </div>
+        )}
+
         {screen === "capture" && (
           <>
             <div className="intro">
@@ -141,6 +186,29 @@ export function App() {
                 it into one manageable place to begin.
               </p>
             </div>
+
+            {confirmedTasks.length > 0 && (
+              <div className="existing-tasks-note">
+                <strong>
+                  {confirmedTasks.length} existing{" "}
+                  {confirmedTasks.length === 1 ? "task is" : "tasks are"} still on your
+                  list.
+                </strong>
+                <p>This brain dump will add to them after your review.</p>
+              </div>
+            )}
+
+            {taskListLoadFailed && (
+              <div className="error-message" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>I couldn’t load your saved task list.</strong>
+                  <p>You can still save this brain dump, but earlier tasks may be hidden.</p>
+                </div>
+              </div>
+            )}
 
             <form className="capture-form" onSubmit={handleSubmit}>
               <div className="field-heading">
@@ -255,9 +323,16 @@ export function App() {
                 <p className="eyebrow">A quick check together</p>
                 <h1 id="page-title">Here’s what I pulled out.</h1>
                 <p className="lede">
-                  This is a simple first pass. Change anything that doesn’t sound right, or
-                  remove anything that isn’t actually a task.
+                  These are the new tasks from this brain dump. Change anything that
+                  doesn’t sound right, or remove anything that isn’t actually a task.
                 </p>
+                {confirmedTasks.length > 0 && (
+                  <p className="existing-review-note">
+                    Your {confirmedTasks.length} existing{" "}
+                    {confirmedTasks.length === 1 ? "task stays" : "tasks stay"} on your
+                    list while you review these.
+                  </p>
+                )}
               </div>
               <span className="task-count">
                 {reviewedTasks.length} {reviewedTasks.length === 1 ? "task" : "tasks"}
@@ -385,22 +460,90 @@ export function App() {
           </form>
         )}
 
-        {screen === "confirmed" && (
-          <div className="success-state" aria-live="polite">
-            <div className="success-mark" aria-hidden="true">
-              <svg viewBox="0 0 24 24" role="img">
-                <path d="m6.75 12.75 3.1 3.1 7.4-7.7" />
-              </svg>
+        {screen === "task-list" && (
+          <div className="task-list-view" aria-live="polite">
+            <div className="task-list-intro">
+              <div>
+                <p className="eyebrow">Your current picture</p>
+                <h1 id="page-title">Here’s what’s on your plate.</h1>
+                <p className="lede">
+                  Each reviewed brain dump adds to this list. Nothing from an earlier
+                  capture is replaced.
+                </p>
+              </div>
+              <span className="task-count">
+                {confirmedTasks.length}{" "}
+                {confirmedTasks.length === 1 ? "task" : "tasks"}
+              </span>
             </div>
-            <p className="eyebrow">Review saved</p>
-            <h1 id="page-title">Got it. That’s a clearer picture.</h1>
-            <p className="lede">
-              Your reviewed tasks are saved as a new version. Next, Weavance can use them
-              to choose one manageable place to start.
-            </p>
-            <button type="button" className="primary-button" onClick={startAnotherCapture}>
-              Add another brain dump
-            </button>
+
+            {taskListLoadFailed && (
+              <div className="error-message" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>Some saved tasks may be missing.</strong>
+                  <p>I couldn’t refresh the complete list just yet.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="current-task-list">
+              {confirmedTasks.map((task, index) => {
+                const firstAction = task.actions[0];
+                const duration = firstAction.duration;
+                return (
+                  <article
+                    className="current-task-card"
+                    key={`${task.captureId}:${task.id}`}
+                  >
+                    <span className="task-number">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <div>
+                      <h2>{task.title}</h2>
+                      <p>
+                        <span>Start with</span>
+                        {firstAction.description}
+                      </p>
+                      {(task.deadline || duration) && (
+                        <div className="task-signals" aria-label="Task details">
+                          {task.deadline && <span>Due {task.deadline.date}</span>}
+                          {duration && (
+                            <span>
+                              {duration.minimum_minutes === duration.maximum_minutes
+                                ? `${duration.minimum_minutes} min`
+                                : `${duration.minimum_minutes}–${duration.maximum_minutes} min`}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+
+              {confirmedTasks.length === 0 && (
+                <div className="empty-review">
+                  <strong>Nothing actionable is on your list yet.</strong>
+                  <p>Your reviewed brain dump is still preserved in interpretation history.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="task-list-footer">
+              <p>
+                Next, Weavance can use this list to choose one manageable place to start.
+              </p>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={startAnotherCapture}
+              >
+                Add another brain dump
+              </button>
+            </div>
           </div>
         )}
       </section>

@@ -21,14 +21,27 @@ from weavance_api.services.interpretations import (
     StaleInterpretationError,
     confirm_interpretation,
     create_interpretation,
+    list_latest_confirmed_interpretations,
 )
 
 router = APIRouter(prefix="/captures/{capture_id}/interpretations", tags=["interpretations"])
+list_router = APIRouter(prefix="/interpretations", tags=["interpretations"])
 fallback_interpreter = DeterministicCaptureInterpreter()
 
 
 def get_capture_interpreter() -> CaptureInterpreter:
     return fallback_interpreter
+
+
+@list_router.get("/confirmed", response_model=list[InterpretationResponse])
+async def list_confirmed_interpretations_endpoint(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> list[InterpretationResponse]:
+    interpretations = await list_latest_confirmed_interpretations(session)
+    return [
+        InterpretationResponse.model_validate(interpretation)
+        for interpretation in interpretations
+    ]
 
 
 @router.post("", response_model=InterpretationResponse, status_code=status.HTTP_201_CREATED)

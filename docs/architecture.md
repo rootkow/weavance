@@ -9,13 +9,16 @@
 | Interpretation request, proposal models, and interpreter protocol | Implemented and tested in isolation |
 | Interpretation orchestration and versioned proposal persistence | Implemented with a line-based fallback |
 | Structured task and first-action review | Implemented; richer interpreted details remain read-only |
+| Cumulative confirmed-task read model and UI | Implemented |
 | Policy, recommendation, and feedback loop | Planned |
-| Capture or proposal history UI | Not designed yet |
+| Raw capture and complete proposal-history UI | Not designed yet |
 
 The current user-facing path saves a capture, creates a versioned interpretation, and lets the user
 add, edit, or remove proposed tasks and starting actions. Confirmation creates another immutable
-interpretation version with user-correction provenance. The path currently ends there: there is no
-history surface, capacity inference, or next-action recommendation yet.
+interpretation version with user-correction provenance. The latest confirmed version from every
+capture is then presented as one cumulative task list and restored when the application loads. The
+path currently ends there: there is no task lifecycle, full history surface, capacity inference, or
+next-action recommendation yet.
 
 ## Target system boundaries
 
@@ -99,9 +102,11 @@ added when the interpretation workflow provides meaningful signals to observe. S
 3. The API validates and stores it as a new versioned interpretation linked to the capture.
 4. The current structured review records user additions, edits, removals, and confirmation as a new
    version.
-5. Future reviews should narrow questions to ambiguity that would materially change the next
+5. The current task-list read model selects the latest confirmed version for every capture and
+   presents their tasks together without rewriting interpretation history.
+6. Future reviews should narrow questions to ambiguity that would materially change the next
    action.
-6. Deterministic policy will remove ineligible actions and apply explicit user intent.
-7. A replaceable strategy will recommend one eligible action and record structured factors.
-8. Policy will validate the recommendation before the API stores and returns it.
-9. The user's response, correction, and eventual outcome will become new evidence.
+7. Deterministic policy will remove ineligible actions and apply explicit user intent.
+8. A replaceable strategy will recommend one eligible action and record structured factors.
+9. Policy will validate the recommendation before the API stores and returns it.
+10. The user's response, correction, and eventual outcome will become new evidence.
