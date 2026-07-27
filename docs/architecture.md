@@ -1,13 +1,28 @@
 # Architecture
 
-## System boundaries
+## Current implementation
+
+| Boundary | Status |
+|---|---|
+| Capture UI and `POST /captures` | Implemented |
+| Exact-text capture persistence in PostgreSQL | Implemented |
+| Interpretation request, proposal models, and interpreter protocol | Implemented and tested in isolation |
+| Interpretation orchestration and versioned proposal persistence | Planned next |
+| Confirmation, policy, recommendation, and feedback loop | Planned |
+| Capture or proposal history UI | Not designed yet |
+
+The current user-facing path ends after PostgreSQL confirms that a capture was saved. The API has
+no read endpoint for captures, and nothing invokes the interpretation contract at runtime yet.
+
+## Target system boundaries
 
 ```mermaid
 flowchart TD
     UI["Conversational UI"] --> API["Application API"]
-    API --> STORE["Persistence"]
-    API --> INTERPRET["Interpretation strategy"]
+    API --> STORE["Capture persistence"]
+    STORE --> INTERPRET["Interpretation strategy"]
     INTERPRET --> PROPOSAL["Typed proposal"]
+    PROPOSAL --> HISTORY["Versioned decision history"]
     PROPOSAL --> POLICY["Deterministic policy"]
     POLICY --> RECOMMEND["Recommendation strategy"]
     RECOMMEND --> VALIDATE["Policy validation"]
@@ -42,7 +57,7 @@ Important interpreted values carry provenance such as `user`, `connected_source`
 `default`, or `learned`. Explicit user corrections are authoritative. Unknown values remain
 unknown unless asking would materially change the recommendation.
 
-## Initial domain concepts
+## Target domain concepts
 
 | Concept | Purpose |
 |---|---|
@@ -60,22 +75,27 @@ unknown unless asking would materially change the recommendation.
 
 ## Observability and traceability
 
-Weavance uses operational telemetry and product decision history for different questions:
+Weavance separates operational telemetry and product decision history because they answer
+different questions:
 
 - Structured logs, metrics, and traces describe how a request or background operation executed.
 - Versioned PostgreSQL records describe why an interpretation or recommendation was produced.
 
-Request IDs correlate API activity without becoming Prometheus labels. User-authored content stays
-out of routine logs and telemetry. OpenTelemetry is the planned instrumentation boundary, with
-Prometheus, Loki, Tempo, and Grafana added when the interpretation workflow provides meaningful
-signals to observe. See [ADR 0005](decisions/0005-observability-foundation.md).
+Structured request and capture events, request IDs, safe metadata, local console formatting, and
+deployed JSON formatting are implemented. User-authored content stays out of routine logs.
+Versioned interpretation and recommendation history is still planned.
+
+OpenTelemetry is the planned instrumentation boundary, with Prometheus, Loki, Tempo, and Grafana
+added when the interpretation workflow provides meaningful signals to observe. See
+[ADR 0005](decisions/0005-observability-foundation.md).
 
 ## Planned request path
 
 1. The API stores the raw capture.
-2. An interpreter returns a typed, versioned proposal with provenance and uncertainty.
-3. The system asks only about ambiguity that would materially change the next action.
-4. Deterministic policy removes ineligible actions and applies explicit user intent.
-5. A replaceable strategy recommends one eligible action and records structured factors.
-6. Policy validates the recommendation before the API stores and returns it.
-7. The user's response, correction, and eventual outcome become new evidence.
+2. An interpreter returns a typed proposal with provenance and uncertainty.
+3. The API validates and stores it as a new versioned interpretation linked to the capture.
+4. The system asks only about ambiguity that would materially change the next action.
+5. Deterministic policy removes ineligible actions and applies explicit user intent.
+6. A replaceable strategy recommends one eligible action and records structured factors.
+7. Policy validates the recommendation before the API stores and returns it.
+8. The user's response, correction, and eventual outcome become new evidence.

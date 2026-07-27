@@ -22,7 +22,8 @@ When everything feels like a lot or I am having trouble getting started, help me
 4. **Recovery time belongs in the plan.** The system protects restorative time and helps the user notice when leisure no longer feels restorative.
 5. **Starting is progress.** Feedback and rewards recognize initiation as well as completion.
 6. **Capacity is contextual.** Plans adapt to the day a person is actually having.
-7. **AI lightens planning work.** The system organizes and schedules a brain dump with minimal management from the user.
+7. **AI lightens planning work.** The system organizes a brain dump and helps choose a useful next
+   action with minimal management from the user.
 8. **Important decisions stay bounded and explainable.** Model suggestions follow deterministic rules and include clear reasons.
 
 ## Initial user
@@ -33,7 +34,7 @@ The first user is the builder. Daily dogfooding and recorded outcomes will groun
 
 The earliest meaningful signal is whether the user starts a suggested action and feels able to return as plans evolve.
 
-For the first dogfooding period, track:
+For the first dogfooding period, the product should eventually track:
 
 - Recommendation accepted, resized, deferred, swapped, or passed
 - Whether work started

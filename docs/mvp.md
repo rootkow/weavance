@@ -6,6 +6,8 @@ A user enters an unstructured brain dump and receives one manageable next action
 
 ## Milestone 0: Foundation
 
+Status: **Complete**
+
 - Product brief and explicit product principles
 - Architecture boundaries and initial decisions
 - React and TypeScript application shell
@@ -14,19 +16,24 @@ A user enters an unstructured brain dump and receives one manageable next action
 
 ## Milestone 1: First vertical slice
 
-1. Capture and store the original brain dump.
-2. Interpret it as typed, versioned task and action proposals while preserving the original wording.
-3. Let the user confirm or correct material assumptions.
-4. Infer capacity conservatively from interaction signals, with an optional lightweight check-in.
-5. Select one concrete next action.
-6. Explain why it was selected.
-7. Accept one of five responses:
-   - Start
-   - Make it smaller
-   - Not right now
-   - Swap task
-   - I'm overwhelmed
-8. Record the response and produce a revised recommendation.
+| Stage | Status | Current boundary |
+|---|---|---|
+| 1. Capture and store the original brain dump | Complete | The UI and `POST /captures` preserve exact text in PostgreSQL |
+| 2. Interpret it as typed, versioned task and action proposals | In progress | The typed contract exists; runtime orchestration and versioned persistence are next |
+| 3. Let the user confirm or correct material assumptions | Planned | Begins after proposals can be persisted and retrieved |
+| 4. Infer capacity conservatively | Planned | Uses interaction signals with an optional lightweight check-in |
+| 5. Select one concrete next action | Planned | Runs only over policy-eligible actions |
+| 6. Explain why it was selected | Planned | Uses structured, attributable factors |
+| 7. Accept a response to the recommendation | Planned | Feeds the next recommendation |
+| 8. Record the response and revise the recommendation | Planned | Closes the first feedback loop |
+
+The five initial responses are:
+
+- Start
+- Make it smaller
+- Not right now
+- Swap task
+- I'm overwhelmed
 
 ## Explicit non-goals
 
