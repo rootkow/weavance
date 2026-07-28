@@ -3,28 +3,29 @@
 **Weave what matters into one manageable next step.**
 
 Weavance is an adaptive executive-function assistant for the moments when deciding what to do
-feels like work of its own. It creates a simpler bridge between everything on a person's mind and
-one concrete action they can begin now.
+feels like work of its own. It creates a simpler bridge between everything on your mind and one
+concrete action you can begin now.
 
-Instead of requiring someone to organize a backlog before receiving help, Weavance starts with an
-unstructured brain dump. It identifies possible tasks and starting actions, lets the user correct
-what it understood, and is designed to use that context to choose a manageable next step. The
-broader task list remains available when requested without becoming the default experience.
+Instead of requiring you to organize a backlog before receiving help, Weavance starts with an
+unstructured brain dump. It identifies possible tasks and starting actions and lets you correct
+what it understood. The complete workflow then uses that context to choose a manageable next step.
+Your broader task list remains available when you request it without becoming the default
+experience.
 
 ## Why Weavance
 
 Traditional task and calendar tools are good at storing decisions, but they often leave the
-difficult parts to the user: sorting, prioritizing, estimating, initiating, and replanning when the
-day changes.
+difficult parts to you: sorting, prioritizing, estimating, initiating, and replanning when the day
+changes.
 
 That planning burden can be especially costly during periods of ADHD-related friction, stress,
-anxiety, burnout, or reduced capacity. Weavance is designed to reduce that burden without taking
-control away from the user or pretending uncertain inferences are facts.
+anxiety, burnout, or reduced capacity. Weavance reduces that burden without taking control away
+from you or pretending uncertain inferences are facts.
 
 ## The intended experience
 
-1. **Unload what is on your mind.** Capture thoughts in the user's own words without organizing
-   them first.
+1. **Unload what is on your mind.** Capture thoughts in your own words without organizing them
+   first.
 2. **Review what Weavance understood.** Correct proposed tasks and concrete starting actions on one
    structured review screen.
 3. **Start with one useful action.** Keep the default experience focused instead of presenting the
@@ -32,15 +33,38 @@ control away from the user or pretending uncertain inferences are facts.
 4. **Respond and adapt.** Starting, resizing, deferring, swapping, or feeling overwhelmed all
    become useful context for what comes next.
 
+For example, you might begin with:
+
+```text
+Need to reply to Jake about the interview
+Dentist appointment keeps slipping — call before 4
+Kitchen is a mess and I only have about 20 minutes
+```
+
+The intended experience turns that into proposals you review and correct:
+
+```text
+Reply about the interview
+  Start with: Open Jake's message and draft a short response
+
+Schedule the dentist appointment
+  Start with: Find the office number and make the call
+
+Reset the kitchen
+  Start with: Put the dishes in the sink
+```
+
+Once the proposals reflect what you meant, the broader experience narrows them to one starting
+action that fits your current capacity. This example illustrates the intended interpretation and
+recommendation flow; the current prototype's simpler behavior is described below.
+
 ## Product principles
 
 - **One clear starting point.** The main experience should answer “What can I do now?”
-- **The user remains authoritative.** Explicit corrections and boundaries override inferred
-  meaning.
+- **You remain authoritative.** Your explicit corrections and boundaries override inferred meaning.
 - **Uncertainty stays visible.** Model output is treated as a sourced proposal, not application
   truth.
-- **Plans reflect current capacity.** Recommendations should fit the day the user is actually
-  having.
+- **Plans reflect current capacity.** Recommendations should fit the day you are actually having.
 - **Recovery belongs in the plan.** Rest is legitimate context, not a failure to be optimized
   away.
 - **Important behavior stays bounded.** Deterministic policy constrains model-assisted
@@ -90,6 +114,10 @@ cp apps/web/.env.example apps/web/.env
 
 The API defaults work with the Compose database. To customize them, copy
 `apps/api/.env.example` to `apps/api/.env` and edit the values.
+
+No model provider or API key is required. The current prototype uses a deterministic line-based
+fallback that turns each nonblank line into an editable task and starting action. A future hosted
+or local model can replace it through the provider-neutral interpretation boundary.
 
 Start PostgreSQL and apply the schema:
 
