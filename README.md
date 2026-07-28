@@ -8,9 +8,8 @@ concrete action you can begin now.
 
 Instead of requiring you to organize a backlog before receiving help, Weavance starts with an
 unstructured brain dump. It identifies possible tasks and starting actions and lets you correct
-what it understood. The complete workflow then uses that context to choose a manageable next step.
-Your broader task list remains available when you request it without becoming the default
-experience.
+what it understood. Weavance then uses that context to choose a manageable next step. Your full
+task list remains available when you request it without taking over the main screen.
 
 ## Why Weavance
 
@@ -22,45 +21,53 @@ That planning burden can be especially costly during periods of ADHD-related fri
 anxiety, burnout, or reduced capacity. Weavance reduces that burden without taking control away
 from you or pretending uncertain inferences are facts.
 
-## The intended experience
+## How it works
 
 1. **Unload what is on your mind.** Capture thoughts in your own words without organizing them
    first.
 2. **Review what Weavance understood.** Correct proposed tasks and concrete starting actions on one
    structured review screen.
-3. **Start with one useful action.** Keep the default experience focused instead of presenting the
-   entire backlog at once.
+3. **Start with one useful action.** Focus on what you can do now instead of confronting the entire
+   backlog at once.
 4. **Respond and adapt.** Starting, resizing, deferring, swapping, or feeling overwhelmed all
    become useful context for what comes next.
 
 For example, you might begin with:
 
 ```text
-Need to reply to Jake about the interview
-Dentist appointment keeps slipping — call before 4
-Kitchen is a mess and I only have about 20 minutes
+Need to reply to Jake about the interview, but check my calendar first
+Dentist appointment keeps slipping
+The office closes at 4
+Kitchen is a mess — dishes everywhere and the counters are covered
+I only have about 20 minutes right now
 ```
 
-The intended experience turns that into proposals you review and correct:
+Weavance turns those thoughts into proposals you can review and correct:
 
 ```text
 Reply about the interview
-  Start with: Open Jake's message and draft a short response
+  Start with: Check your calendar and choose two available times
 
 Schedule the dentist appointment
   Start with: Find the office number and make the call
+  Deadline: Before 4
 
 Reset the kitchen
   Start with: Put the dishes in the sink
 ```
 
-Once the proposals reflect what you meant, the broader experience narrows them to one starting
-action that fits your current capacity. This example illustrates the intended interpretation and
-recommendation flow; the current prototype's simpler behavior is described below.
+After you confirm the proposals, Weavance narrows them to one starting action:
+
+```text
+Start here
+
+Find the dentist's office number and make the call.
+Why: The office closes at 4, and this should fit within the 20 minutes you have.
+```
 
 ## Product principles
 
-- **One clear starting point.** The main experience should answer “What can I do now?”
+- **One clear starting point.** The main screen should answer “What can I do now?”
 - **You remain authoritative.** Your explicit corrections and boundaries override inferred meaning.
 - **Uncertainty stays visible.** Model output is treated as a sourced proposal, not application
   truth.
