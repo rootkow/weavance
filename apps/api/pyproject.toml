@@ -1,7 +1,7 @@
 [project]
 name = "weavance-api"
 version = "0.1.0"
-description = "API for the Weavance adaptive executive-function assistant"
+description = "API for the Weavance adaptive activation and re-entry assistant"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.14,<2",

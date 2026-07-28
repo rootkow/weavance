@@ -17,8 +17,8 @@ local model can replace the fallback without changing the orchestration boundary
 - A timezone-aware reference timestamp for resolving relative phrases such as “tomorrow”
 - The user's IANA time zone for interpreting local dates and times
 
-Capacity and recommendation state are handled after this request. Interpretation describes what
-the capture appears to contain; recommendation later decides what is useful to show.
+Explicit context and recommendation state are handled after this request. Interpretation describes
+what the capture appears to contain; recommendation later decides what is useful to show.
 
 ## Output
 

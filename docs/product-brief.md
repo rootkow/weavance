@@ -2,48 +2,78 @@
 
 ## Positioning
 
-Weavance is an adaptive executive-function assistant for people who want a simpler bridge from intention to action. A user can unload everything occupying their mind; Weavance identifies what deserves attention, makes the starting point approachable, protects recovery time, and reshapes the plan as circumstances change.
+Weavance is an adaptive activation and re-entry assistant for people who want a simpler bridge
+from intention to action. A user can unload whatever is occupying their mind; Weavance helps turn
+it into one bounded commitment, learns from explicit responses, and provides a small way back
+after interruptions.
 
 ## Problem
 
-Prioritizing, estimating, scheduling, initiating, and rescheduling all require executive function. Traditional task and calendar tools leave most of that work to the user, even though the effort can vary significantly with ADHD, stress, burnout, anxiety, or day-to-day capacity.
+Prioritizing, estimating, initiating, and replanning all impose decisions before useful work can
+begin. That burden varies from one moment to the next and can be especially noticeable when a
+person feels overwhelmed, short on time or energy, interrupted, or unsure where to begin.
 
-When circumstances change, many tools continue carrying earlier items forward unchanged. The backlog grows at the same moment the user could benefit most from a clear, current starting point.
+When circumstances change, many tools continue carrying earlier items forward unchanged. The
+backlog grows at the same moment the user could benefit most from a clear starting point or a
+small way back into unfinished work.
 
 ## Primary job to be done
 
-When everything feels like a lot or I am having trouble getting started, help me choose what would be useful now, make the first step feel possible, and adapt with me as circumstances change.
+When everything feels like a lot or I am having trouble getting started, give me one useful,
+limited commitment I can accept now. If I lose momentum, help me return without making me
+reconstruct the plan.
 
 ## Product principles
 
-1. **One clear starting point.** The default execution screen shows a concrete next step.
-2. **Every response is useful context.** Starting, resizing, deferring, or swapping helps shape what comes next.
-3. **Plans stay current.** Open work is reassessed before it is carried forward.
-4. **Recovery time belongs in the plan.** The system protects restorative time and helps the user notice when leisure no longer feels restorative.
-5. **Starting is progress.** Feedback and rewards recognize initiation as well as completion.
-6. **Capacity is contextual.** Plans adapt to the day a person is actually having.
-7. **AI lightens planning work.** The system organizes a brain dump and helps choose a useful next
-   action with minimal management from the user.
-8. **Important decisions stay bounded and explainable.** Model suggestions follow deterministic rules and include clear reasons.
+1. **One clear starting point.** The default execution screen shows one concrete entry point.
+2. **Commitments stay bounded.** Every recommendation includes a clear stopping condition.
+3. **Acceptance is not completion.** Accepting, starting, satisfying a bounded commitment, and
+   completing a persistent task remain distinct.
+4. **Every explicit response is useful evidence.** Resizing, deferring, swapping, feeling
+   overwhelmed, and reporting an outcome can shape what comes next.
+5. **Unknown remains unknown.** Silence is not interpreted as success, failure, avoidance, or any
+   other mental state.
+6. **Re-entry is a first-class workflow.** Unfinished work returns through a useful checkpoint,
+   not merely as the same overdue task.
+7. **You remain authoritative.** Explicit corrections, boundaries, and task state override
+   inferred meaning.
+8. **Important decisions stay bounded and explainable.** Model suggestions follow deterministic
+   rules and include clear reasons.
+
+## Interaction priority
+
+Until bounded recommendations exist, the current brain-dump-first startup remains appropriate.
+Once the recommendation loop is usable, the main interface should prioritize:
+
+1. An active commitment or re-entry opportunity
+2. A pending interpretation review
+3. A request for one place to start
+4. A new brain dump
+
+The full task list remains available through an explicit action instead of becoming the default
+screen.
 
 ## Initial user
 
-The first user is the builder. Daily dogfooding and recorded outcomes will ground early product decisions in the builder's lived experience.
+The first user is the builder. Daily dogfooding and recorded outcomes will ground early product
+decisions in the builder's lived experience.
 
 ## Success signal
 
-The earliest meaningful signal is whether the user starts a suggested action and feels able to return as plans evolve.
+The earliest meaningful signal is whether a bounded recommendation helps the user begin and
+whether they can find a manageable way back after an interruption.
 
 For the first dogfooding period, the product should eventually track:
 
-- Recommendation accepted, resized, deferred, swapped, or passed
-- Whether work started
-- Time-to-start
+- Recommendation accepted, resized, deferred, swapped, or overwhelmed
+- User-reported outcome: done for now, progress made, did not start, or keep going
 - Whether the promised stopping point was honored
-- Perceived difficulty before and after
-- Whether the recommendation brought relief or added pressure
-- Whether the user returned after plans changed or momentum faded
+- Optional feedback that the recommendation helped or added pressure
+- Whether a later re-entry recommendation was accepted
+
+No outcome is inferred when the user does not report one.
 
 ## Safety boundary
 
-Weavance provides planning support, not medical diagnosis or treatment. It should avoid clinical claims, avoid presenting inferred mental states as facts, and encourage professional support when a user reports a marked change from their baseline or signs of significant distress.
+Weavance provides activation and planning support, not medical diagnosis or treatment. It avoids
+clinical claims and does not present inferred mental states as facts.

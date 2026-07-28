@@ -6,9 +6,9 @@
 
 ## Context
 
-Task boundaries, urgency, duration, difficulty, and a person's current capacity are not universally
-objective. Treating them as deterministic values would create false confidence and make later model
-integration harder. At the same time, explicit user intent and application invariants must remain
+Task boundaries, urgency, duration, and difficulty are not universally objective. Treating them as
+deterministic values would create false confidence and make later model integration harder. At the
+same time, explicit user intent, user-provided context, and application invariants must remain
 predictable and testable.
 
 ## Decision
@@ -23,6 +23,12 @@ Weavance separates three responsibilities:
 
 Interpretation values record their provenance and uncertainty. Unknown values remain unknown.
 Explicit user corrections override inferred values.
+
+Recommendation initially uses a lightweight, explicit context snapshot rather than opaque
+inference about capacity, motivation, or mental state. The snapshot may include available time, a
+request for something easier, and known deadlines or constraints. The lifecycle and persistence
+semantics for bounded recommendations are defined in
+[ADR 0006](0006-bounded-recommendation-episodes.md).
 
 The intended product experience may use an LLM for subjective interpretation. The first contract
 will also support a fake implementation for tests and a deliberately modest deterministic fallback;

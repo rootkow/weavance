@@ -2,14 +2,15 @@
 
 **Weave what matters into one manageable next step.**
 
-Weavance is an adaptive executive-function assistant for the moments when deciding what to do
-feels like work of its own. It creates a simpler bridge between everything on your mind and one
-concrete action you can begin now.
+Weavance is an adaptive activation and re-entry assistant for the moments when deciding how to
+begin feels like work of its own. It creates a simpler bridge between everything on your mind and
+one bounded action you can begin now.
 
 Instead of requiring you to organize a backlog before receiving help, Weavance starts with an
 unstructured brain dump. It identifies possible tasks and starting actions and lets you correct
-what it understood. Weavance then uses that context to choose a manageable next step. Your full
-task list remains available when you request it without taking over the main screen.
+what it understood. Weavance then uses that context to offer one manageable commitment with a
+clear stopping point. Your full task list remains available when you request it without taking
+over the main screen.
 
 ## Why Weavance
 
@@ -17,9 +18,9 @@ Traditional task and calendar tools are good at storing decisions, but they ofte
 difficult parts to you: sorting, prioritizing, estimating, initiating, and replanning when the day
 changes.
 
-That planning burden can be especially costly during periods of stress, anxiety, burnout, or
-reduced capacity. Weavance reduces that burden without taking control away from you or pretending
-uncertain inferences are facts.
+That burden can grow whenever you feel overwhelmed, low on time or energy, interrupted, or simply
+unsure where to begin. Weavance reduces the number of decisions between intention and action
+without taking control away from you or pretending uncertain inferences are facts.
 
 ## How it works
 
@@ -27,33 +28,39 @@ uncertain inferences are facts.
    first.
 2. **Review what Weavance understood.** Correct proposed tasks and concrete starting actions on one
    structured review screen.
-3. **Start with one useful action.** Focus on what you can do now instead of confronting the entire
-   backlog at once.
-4. **Respond and adapt.** Starting, resizing, deferring, swapping, or feeling overwhelmed all
-   become useful context for what comes next.
+3. **Accept one bounded commitment.** See where to begin, where to stop, and why the action fits
+   now instead of confronting the entire backlog.
+4. **Report what happened.** Progress, difficulty starting, and a request to continue all help
+   shape what comes next without being treated as success or failure.
+5. **Find your way back.** When momentum disappears, resume from a small checkpoint instead of
+   receiving the unchanged task again.
 
 For example, you might begin with:
 
 ```text
-Need to reply to Jake about the interview, but check my calendar first
-Dentist appointment keeps slipping
-The office closes at 4
-Kitchen is a mess — dishes everywhere and the counters are covered
-I only have about 20 minutes right now
+update resume
+apply for the Software Engineer job at Northstar
+work on Weavance
+clean my office
+schedule dentist appointment
+The dentist's office closes at 4, and I only have about 20 minutes.
 ```
 
 Weavance turns those thoughts into proposals you can review and correct:
 
 ```text
-Reply about the interview
-  Start with: Check your calendar and choose two available times
+Apply for the Software Engineer role at Northstar
+  Start with: Update your resume for the role
 
 Schedule the dentist appointment
   Start with: Find the office number and make the call
   Deadline: Before 4
 
-Reset the kitchen
-  Start with: Put the dishes in the sink
+Work on Weavance
+  Start with: Open the project and choose one unfinished item
+
+Clean the office
+  Start with: Clear one section of the desk
 ```
 
 After you confirm the proposals, Weavance narrows them to one starting action:
@@ -63,17 +70,19 @@ Start here
 
 Find the dentist's office number and make the call.
 Why: The office closes at 4, and this should fit within the 20 minutes you have.
+You're done when: The appointment is scheduled, you leave a message, or you know when to call
+again.
 ```
 
 ## Product principles
 
 - **One clear starting point.** The main screen should answer “What can I do now?”
+- **Commitments stay bounded.** Every recommendation says where to begin and when you can stop.
+- **Re-entry is part of the work.** After an interruption, Weavance helps you find a small way back
+  in.
 - **You remain authoritative.** Your explicit corrections and boundaries override inferred meaning.
 - **Uncertainty stays visible.** Model output is treated as a sourced proposal, not application
   truth.
-- **Plans reflect current capacity.** Recommendations should fit the day you are actually having.
-- **Recovery belongs in the plan.** Rest is legitimate context, not a failure to be optimized
-  away.
 - **Important behavior stays bounded.** Deterministic policy constrains model-assisted
   interpretation and recommendation.
 
@@ -81,8 +90,8 @@ Why: The office closes at 4, and this should fit within the 20 minutes you have.
 
 Weavance is under active development. The working prototype currently covers capture,
 interpretation, structured review, and preserving confirmed tasks across brain dumps. It does not
-yet make the capacity-aware recommendation described above or close the response-and-revision
-loop.
+yet create bounded recommendation episodes, collect outcomes, or provide the re-entry flow
+described above.
 
 See the [MVP scope](docs/mvp.md) for current progress and acceptance criteria.
 
