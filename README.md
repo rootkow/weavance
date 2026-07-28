@@ -17,9 +17,9 @@ Traditional task and calendar tools are good at storing decisions, but they ofte
 difficult parts to you: sorting, prioritizing, estimating, initiating, and replanning when the day
 changes.
 
-That planning burden can be especially costly during periods of ADHD-related friction, stress,
-anxiety, burnout, or reduced capacity. Weavance reduces that burden without taking control away
-from you or pretending uncertain inferences are facts.
+That planning burden can be especially costly during periods of stress, anxiety, burnout, or
+reduced capacity. Weavance reduces that burden without taking control away from you or pretending
+uncertain inferences are facts.
 
 ## How it works
 
