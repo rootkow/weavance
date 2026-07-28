@@ -56,6 +56,7 @@ async def update_task(
         task.status = update.status
 
     await session.commit()
+    await session.refresh(task, attribute_names=["updated_at"])
     logger.info(
         "task.updated",
         task_id=task.id,
@@ -89,6 +90,7 @@ async def update_action(
         action.status = update.status
 
     await session.commit()
+    await session.refresh(action, attribute_names=["updated_at"])
     logger.info(
         "action.updated",
         task_id=task.id,
