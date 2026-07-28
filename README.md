@@ -2,42 +2,71 @@
 
 **Weave what matters into one manageable next step.**
 
-Weavance is an adaptive executive-function assistant that turns an unstructured brain dump into one manageable next action and adapts the plan as the day changes.
+Weavance is an adaptive executive-function assistant for the moments when deciding what to do
+feels like work of its own. It creates a simpler bridge between everything on a person's mind and
+one concrete action they can begin now.
 
-## Guiding idea
+Instead of requiring someone to organize a backlog before receiving help, Weavance starts with an
+unstructured brain dump. It identifies possible tasks and starting actions, lets the user correct
+what it understood, and is designed to use that context to choose a manageable next step. The
+broader task list remains available when requested without becoming the default experience.
 
-Routines can flex with real life. Weavance treats changes in momentum as useful context and builds a fresh path forward around what matters, what fits the user's current capacity, and what would make starting easier.
+## Why Weavance
+
+Traditional task and calendar tools are good at storing decisions, but they often leave the
+difficult parts to the user: sorting, prioritizing, estimating, initiating, and replanning when the
+day changes.
+
+That planning burden can be especially costly during periods of ADHD-related friction, stress,
+anxiety, burnout, or reduced capacity. Weavance is designed to reduce that burden without taking
+control away from the user or pretending uncertain inferences are facts.
+
+## The intended experience
+
+1. **Unload what is on your mind.** Capture thoughts in the user's own words without organizing
+   them first.
+2. **Review what Weavance understood.** Correct proposed tasks and concrete starting actions on one
+   structured review screen.
+3. **Start with one useful action.** Keep the default experience focused instead of presenting the
+   entire backlog at once.
+4. **Respond and adapt.** Starting, resizing, deferring, swapping, or feeling overwhelmed all
+   become useful context for what comes next.
+
+## Product principles
+
+- **One clear starting point.** The main experience should answer “What can I do now?”
+- **The user remains authoritative.** Explicit corrections and boundaries override inferred
+  meaning.
+- **Uncertainty stays visible.** Model output is treated as a sourced proposal, not application
+  truth.
+- **Plans reflect current capacity.** Recommendations should fit the day the user is actually
+  having.
+- **Recovery belongs in the plan.** Rest is legitimate context, not a failure to be optimized
+  away.
+- **Important behavior stays bounded.** Deterministic policy constrains model-assisted
+  interpretation and recommendation.
+
+## Development stage
+
+Weavance is under active development. The working prototype currently covers capture,
+interpretation, structured review, and preserving confirmed tasks across brain dumps. It does not
+yet make the capacity-aware recommendation described above or close the response-and-revision
+loop.
+
+See the [MVP scope](docs/mvp.md) for current progress and acceptance criteria.
 
 ## Repository layout
 
-- `apps/api`: FastAPI service and deterministic planning boundary
-- `apps/web`: React and TypeScript application
-- `docs`: Product brief, MVP boundaries, architecture, and decisions
-
-## Implementation status
-
-The current vertical slice can:
-
-- accept a brain dump through the web application
-- preserve its exact text in PostgreSQL through `POST /captures`
-- reject blank captures and captures longer than 50,000 characters
-- correlate requests through privacy-aware structured logs
-- represent provider-neutral interpretation requests and proposals through a tested typed contract
-- create and persist a versioned proposal through a transparent line-based fallback interpreter
-- let the user add, edit, or remove proposed tasks and starting actions
-- preserve the reviewed result as a separate confirmed interpretation version
-- restore the latest confirmed tasks from every brain dump when the web application loads
-- present that cumulative task list only when the user explicitly opens it
-
-The cumulative list is a secondary, user-opened current-state read model, not the default
-experience or a full capture or interpretation-history surface. The fallback intentionally
-performs only a modest first pass; it is replaceable through the existing interpreter contract.
-Task lifecycle, capacity inference, policy, recommendation selection, and the main one-action
-execution screen are still planned.
+```text
+apps/
+├── api/    FastAPI service, persistence, and interpretation boundaries
+└── web/    React and TypeScript application
+docs/       Product, architecture, contract, and decision records
+```
 
 ## Local development
 
-Requirements:
+### Requirements
 
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/)
@@ -45,23 +74,22 @@ Requirements:
 - npm 10+
 - Docker with Compose
 
-Install dependencies:
+### Set up the project
+
+Install the API and web dependencies:
 
 ```bash
 make install
 ```
 
-The Make targets prefer an active virtual environment, including one managed by
-`pyenv-virtualenv`. When no virtual environment is active, uv uses `apps/api/.venv`.
-
-Configure the web application to reach the locally running API:
+Configure the web application:
 
 ```bash
 cp apps/web/.env.example apps/web/.env
 ```
 
-The API defaults work with the Compose database. To override them, copy
-`apps/api/.env.example` to `apps/api/.env` and edit the app-specific values.
+The API defaults work with the Compose database. To customize them, copy
+`apps/api/.env.example` to `apps/api/.env` and edit the values.
 
 Start PostgreSQL and apply the schema:
 
@@ -70,76 +98,48 @@ make db-up
 make db-migrate
 ```
 
-Run the API and web app in separate terminals:
+Run the API and web application in separate terminals:
 
 ```bash
 make api-dev
 make web-dev
 ```
 
-Then open `http://localhost:5173`. The API health endpoint is available at `http://localhost:8000/health`.
+Open `http://localhost:5173`. The API health endpoint is available at
+`http://localhost:8000/health`, and its generated OpenAPI interface is available at
+`http://localhost:8000/docs`.
 
-Run the local lint, unit-test, and build checks:
+The Make targets use an active virtual environment when one is available, including environments
+managed by `pyenv-virtualenv`. Otherwise, uv uses `apps/api/.venv`.
+
+To run the entire stack with Compose instead:
+
+```bash
+docker compose up --build
+```
+
+## Verification
+
+Run linting, type checks, unit tests, and the production web build:
 
 ```bash
 make check
 ```
 
-PostgreSQL integration tests require a disposable test database. Create it once, then provide its
-URL when running the checks:
+PostgreSQL integration tests require a disposable test database:
 
 ```bash
 docker compose exec db createdb -U weavance weavance_test
 WEAVANCE_TEST_DATABASE_URL=postgresql+asyncpg://weavance:weavance@localhost:5432/weavance_test make check
 ```
 
-The integration-test fixture applies all migrations before the tests and downgrades the test
-database back to an empty schema afterward. GitHub Actions always runs these tests against its own
-PostgreSQL service.
-
-Docker Compose is also available:
-
-```bash
-docker compose up --build
-```
-
-The API container applies pending migrations before starting. A deployed environment should run
-migrations as a separate release step.
-
-### Logging
-
-The API writes readable event logs locally and JSON logs in deployed environments. Every HTTP
-response includes an `X-Request-ID` that is also present in the corresponding request log.
-
-Logging can be configured with:
-
-- `WEAVANCE_LOG_LEVEL`: `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`
-- `WEAVANCE_LOG_FORMAT`: `auto`, `console`, or `json`
-
-`auto` selects console output for the `local` environment and JSON everywhere else. Application
-logs contain IDs and bounded metadata; they do not contain brain dumps or other user-authored
-content.
-
-## Current API
-
-- `GET /health` returns service status and the configured environment.
-- `POST /captures` stores a nonblank brain dump of at most 50,000 characters and returns its ID,
-  exact original text, and creation time.
-- `POST /captures/{capture_id}/interpretations` creates and stores a versioned proposal using the
-  configured interpreter.
-- `POST /captures/{capture_id}/interpretations/{interpretation_id}/confirm` stores reviewed task
-  and action corrections as a new confirmed version.
-- `GET /interpretations/confirmed` returns the latest confirmed interpretation for each capture,
-  ordered by capture creation time.
-- `/docs` exposes FastAPI's generated OpenAPI interface during local development.
-
-There are no raw-capture or complete interpretation-history endpoints yet. Task update, completion,
-and deletion endpoints are also not implemented.
+The integration fixture applies all migrations before testing and removes the schema afterward.
+GitHub Actions runs the same checks against an isolated PostgreSQL service.
 
 ## Documentation
 
-- [Product brief](docs/product-brief.md): problem, principles, initial user, and success signals
-- [MVP scope](docs/mvp.md): implementation progress, first vertical slice, and non-goals
-- [Architecture](docs/architecture.md): current boundaries and target request flow
+- [Product brief](docs/product-brief.md): problem, principles, intended user, and success signals
+- [MVP scope](docs/mvp.md): implementation progress, acceptance criteria, and non-goals
+- [Architecture](docs/architecture.md): current and target system boundaries
 - [Interpretation contract](docs/interpretation-contract.md): provider-neutral typed interface
 - [Architecture decisions](docs/decisions): accepted and superseded ADRs
