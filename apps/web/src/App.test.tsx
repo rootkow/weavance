@@ -67,6 +67,55 @@ const interpretation = {
   },
 };
 
+interface TestInterpretation {
+  id: string;
+  capture_id: string;
+  created_at: string;
+  proposal: {
+    tasks: Array<{
+      id: string;
+      title: string;
+      provenance: object;
+      deadline?: object | null;
+      actions: Array<{
+        id: string;
+        description: string;
+        provenance: object;
+        duration?: object | null;
+      }>;
+    }>;
+  };
+}
+
+function tasksFromInterpretations(...confirmedInterpretations: TestInterpretation[]) {
+  return confirmedInterpretations.flatMap((confirmed) =>
+    confirmed.proposal.tasks.map((task) => ({
+      id: task.id,
+      source_capture_id: confirmed.capture_id,
+      source_interpretation_id: confirmed.id,
+      title: task.title,
+      status: "active",
+      provenance: task.provenance,
+      deadline: "deadline" in task ? task.deadline : null,
+      importance: null,
+      created_at: confirmed.created_at,
+      updated_at: confirmed.created_at,
+      actions: task.actions.map((action, actionIndex) => ({
+        id: action.id,
+        task_id: task.id,
+        source_interpretation_id: confirmed.id,
+        description: action.description,
+        status: "active",
+        position: actionIndex + 1,
+        provenance: action.provenance,
+        duration: "duration" in action ? action.duration : null,
+        created_at: confirmed.created_at,
+        updated_at: confirmed.created_at,
+      })),
+    })),
+  );
+}
+
 function jsonResponse(body: unknown, status = 201): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -132,7 +181,7 @@ describe("App", () => {
     };
     const fetchMock = successfulFlowFetch().mockResolvedValueOnce(
       jsonResponse(confirmedInterpretation),
-    );
+    ).mockResolvedValueOnce(jsonResponse(tasksFromInterpretations(confirmedInterpretation), 200));
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
@@ -331,7 +380,9 @@ describe("App", () => {
     };
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(jsonResponse([confirmedInterpretation], 200)),
+      vi
+        .fn()
+        .mockResolvedValue(jsonResponse(tasksFromInterpretations(confirmedInterpretation), 200)),
     );
 
     render(<App />);
@@ -349,6 +400,53 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Update my resume" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Do laundry" })).toBeInTheDocument();
     expect(screen.getByText("2 tasks")).toBeInTheDocument();
+  });
+
+  it("completes, reopens, and archives canonical tasks explicitly", async () => {
+    const confirmedInterpretation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    const [activeTask] = tasksFromInterpretations(confirmedInterpretation);
+    const completedTask = { ...activeTask, status: "completed" };
+    const reopenedTask = { ...activeTask, status: "active" };
+    const archivedTask = { ...activeTask, status: "archived" };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse([activeTask], 200))
+      .mockResolvedValueOnce(jsonResponse(completedTask, 200))
+      .mockResolvedValueOnce(jsonResponse(reopenedTask, 200))
+      .mockResolvedValueOnce(jsonResponse(archivedTask, 200));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await screen.findByText("1 existing task is safely stored.");
+    fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mark complete" }));
+
+    expect(await screen.findByText("Completed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reopen" })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `/tasks/${activeTask.id}`,
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ status: "completed" }),
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reopen" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Completed")).not.toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Archive" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: activeTask.title })).not.toBeInTheDocument();
+    });
+    expect(screen.getByText("Nothing actionable is on your list yet.")).toBeInTheDocument();
   });
 
   it("adds tasks from another brain dump without replacing the current list", async () => {
@@ -395,9 +493,18 @@ describe("App", () => {
     };
     const fetchMock = successfulFlowFetch()
       .mockResolvedValueOnce(jsonResponse(firstConfirmation))
+      .mockResolvedValueOnce(
+        jsonResponse(tasksFromInterpretations(firstConfirmation), 200),
+      )
       .mockResolvedValueOnce(jsonResponse(secondCapture))
       .mockResolvedValueOnce(jsonResponse(secondInterpretation))
-      .mockResolvedValueOnce(jsonResponse(secondConfirmation));
+      .mockResolvedValueOnce(jsonResponse(secondConfirmation))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          tasksFromInterpretations(firstConfirmation, secondConfirmation),
+          200,
+        ),
+      );
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
@@ -484,10 +591,18 @@ describe("App", () => {
     };
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse([firstConfirmation, secondConfirmation], 200))
+      .mockResolvedValueOnce(
+        jsonResponse(tasksFromInterpretations(firstConfirmation, secondConfirmation), 200),
+      )
       .mockResolvedValueOnce(jsonResponse(capture))
       .mockResolvedValueOnce(jsonResponse(interpretation))
-      .mockResolvedValueOnce(jsonResponse(updatedFirstConfirmation));
+      .mockResolvedValueOnce(jsonResponse(updatedFirstConfirmation))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          tasksFromInterpretations(updatedFirstConfirmation, secondConfirmation),
+          200,
+        ),
+      );
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 

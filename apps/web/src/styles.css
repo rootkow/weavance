@@ -732,6 +732,17 @@ textarea::placeholder {
   line-height: 1.4;
 }
 
+.task-status {
+  display: inline-flex;
+  margin-top: 0.45rem;
+  border-radius: 999px;
+  padding: 0.25rem 0.5rem;
+  color: #87ded3;
+  background: rgba(58, 178, 164, 0.08);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
 .current-task-card p {
   display: grid;
   gap: 0.2rem;
@@ -751,6 +762,37 @@ textarea::placeholder {
 
 .current-task-card .task-signals {
   margin-top: 0.7rem;
+}
+
+.task-lifecycle-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.task-lifecycle-actions .secondary-button {
+  min-height: 2.35rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.76rem;
+}
+
+.archive-button {
+  padding: 0.35rem 0;
+  color: #8491a6;
+  background: transparent;
+  font-size: 0.75rem;
+  font-weight: 680;
+}
+
+.archive-button:hover:not(:disabled) {
+  color: #f0aaa2;
+}
+
+.archive-button:disabled,
+.task-lifecycle-actions .secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 .task-list-footer {
