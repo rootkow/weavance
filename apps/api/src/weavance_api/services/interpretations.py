@@ -20,6 +20,7 @@ from weavance_api.interpretation import (
 from weavance_api.models import Capture, Interpretation, InterpretationStatus
 from weavance_api.observability import get_logger
 from weavance_api.schemas.interpretation import InterpretationConfirmation
+from weavance_api.services.tasks import materialize_confirmed_tasks
 
 logger = get_logger(__name__)
 
@@ -223,6 +224,7 @@ async def confirm_interpretation(
         reference_time=original.reference_time,
         time_zone=original.time_zone,
         proposal=confirmed_proposal,
+        materialize_tasks=True,
     )
 
 
@@ -235,6 +237,7 @@ async def _persist_interpretation(
     reference_time: datetime,
     time_zone: str,
     proposal: InterpretationProposal,
+    materialize_tasks: bool = False,
 ) -> Interpretation:
     await _lock_capture(session, capture_id)
     interpretation = Interpretation(
@@ -248,6 +251,15 @@ async def _persist_interpretation(
     )
     session.add(interpretation)
     try:
+        if materialize_tasks:
+            await session.flush()
+            session.add_all(
+                await materialize_confirmed_tasks(
+                    session,
+                    interpretation=interpretation,
+                    proposal=proposal,
+                )
+            )
         await session.flush()
         await session.commit()
     except SQLAlchemyError:
