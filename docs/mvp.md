@@ -23,7 +23,7 @@ Status: **Complete**
 | 1. Capture and store the original brain dump | Complete | The UI and `POST /captures` preserve exact text in PostgreSQL |
 | 2. Interpret it as typed, versioned task and action proposals | Complete | A replaceable line-based fallback creates validated proposals and PostgreSQL stores every version |
 | 3. Let the user confirm or correct material assumptions | In progress | The structured review supports adding, editing, and removing tasks and first actions; richer interpreted details are not editable yet |
-| 4. Materialize canonical tasks and actions | Complete | Confirmation creates lifecycle-aware application state without rewriting capture or interpretation history; title/action edits are exposed through the API, and completion/reopening/archival are available in the secondary UI |
+| 4. Materialize canonical tasks and actions | Complete | Confirmation creates lifecycle-aware application state without rewriting capture or interpretation history; task and first-action editing plus completion/reopening/archival are available in the secondary UI |
 | 5. Collect an explicit context snapshot | Planned | Available time, a request for something easier, and known constraints remain optional and user-sourced |
 | 6. Create one bounded recommendation episode | Planned | A deterministic strategy selects a policy-eligible action and records its entry point, stopping condition, reason, and strategy version |
 | 7. Accept a pre-start response | Planned | Start, resize, defer, swap, and overwhelmed are explicit episode events |

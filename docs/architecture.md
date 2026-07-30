@@ -11,7 +11,7 @@
 | Structured task and first-action review | Implemented; richer interpreted details remain read-only |
 | Canonical task and action materialization | Implemented at confirmation, with migration backfill |
 | Canonical task and action lifecycle | Implemented for listing, editing, completion, reopening, and archival |
-| Secondary task-management UI | Implemented for completion, reopening, and archival; inline editing remains API-only |
+| Secondary task-management UI | Implemented for task and first-action editing, completion, reopening, and archival |
 | Bounded recommendation episodes, outcomes, and re-entry | Planned |
 | Raw capture and complete proposal-history UI | Not designed yet |
 
@@ -21,9 +21,9 @@ immutable interpretation version and materializes its reviewed tasks and actions
 application state. Reinterpreting and reconfirming the same capture archives the prior canonical
 projection without deleting its history. The application restores non-archived canonical tasks
 when it loads, but the list stays hidden until the user explicitly opens it. The secondary list
-supports completion, reopening, and archival. The path currently ends there: there is no full
-history surface, explicit context snapshot, bounded recommendation episode, outcome reporting, or
-re-entry yet.
+supports editing the task and its first action along with completion, reopening, and archival. The
+path currently ends there: there is no full history surface, explicit context snapshot, bounded
+recommendation episode, outcome reporting, or re-entry yet.
 
 ## Target system boundaries
 

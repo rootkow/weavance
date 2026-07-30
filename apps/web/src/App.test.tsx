@@ -428,6 +428,63 @@ describe("App", () => {
     expect(screen.getByText("2 tasks")).toBeInTheDocument();
   });
 
+  it("edits a saved task and its starting action together", async () => {
+    const confirmedInterpretation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    const [activeTask] = tasksFromInterpretations(confirmedInterpretation);
+    const updatedTask = {
+      ...activeTask,
+      title: "Update resume for backend roles",
+      updated_at: "2026-07-30T10:00:00Z",
+      actions: [
+        {
+          ...activeTask.actions[0],
+          description: "Revise one backend resume bullet",
+          updated_at: "2026-07-30T10:00:00Z",
+        },
+      ],
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse([activeTask], 200))
+      .mockResolvedValueOnce(jsonResponse(updatedTask, 200));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await screen.findByText("1 existing task is safely stored.");
+    fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("Task"), {
+      target: { value: updatedTask.title },
+    });
+    fireEvent.change(screen.getByLabelText("Starting action"), {
+      target: { value: updatedTask.actions[0].description },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    expect(
+      await screen.findByRole("heading", { name: updatedTask.title }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(updatedTask.actions[0].description)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `/tasks/${activeTask.id}/content`,
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({
+          title: updatedTask.title,
+          action_id: activeTask.actions[0].id,
+          action_description: updatedTask.actions[0].description,
+        }),
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
   it("completes, reopens, and archives canonical tasks explicitly", async () => {
     const confirmedInterpretation = {
       ...interpretation,

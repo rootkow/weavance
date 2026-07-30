@@ -69,16 +69,24 @@ async def test_confirmation_materializes_tasks_and_supports_explicit_lifecycle(
             task = materialized[0]
             action = task["actions"][0]
 
+            content_update_response = await client.patch(
+                f"/tasks/{task['id']}/content",
+                json={
+                    "title": "Update resume for backend roles",
+                    "action_id": action["id"],
+                    "action_description": "Open the resume and revise one backend bullet",
+                },
+            )
             task_update_response = await client.patch(
                 f"/tasks/{task['id']}",
                 json={
-                    "title": "Update resume for backend roles",
+                    "title": "Tailor resume for platform roles",
                     "status": "completed",
                 },
             )
             action_update_response = await client.patch(
                 f"/tasks/{task['id']}/actions/{action['id']}",
-                json={"description": "Open the resume and revise one backend bullet"},
+                json={"description": "Polish one backend resume bullet"},
             )
             archive_response = await client.patch(
                 f"/tasks/{task['id']}",
@@ -104,8 +112,22 @@ async def test_confirmation_materializes_tasks_and_supports_explicit_lifecycle(
     assert action["source_interpretation_id"] == confirmed_interpretation["id"]
     assert action["description"] == "Revise one backend resume bullet"
 
+    assert content_update_response.status_code == 200
+    assert content_update_response.json()["title"] == "Update resume for backend roles"
+    assert (
+        content_update_response.json()["actions"][0]["description"]
+        == "Open the resume and revise one backend bullet"
+    )
+    assert (
+        content_update_response.json()["provenance"]["evidence_source"]
+        == "user_correction"
+    )
+    assert (
+        content_update_response.json()["actions"][0]["provenance"]["evidence_source"]
+        == "user_correction"
+    )
     assert task_update_response.status_code == 200
-    assert task_update_response.json()["title"] == "Update resume for backend roles"
+    assert task_update_response.json()["title"] == "Tailor resume for platform roles"
     assert task_update_response.json()["status"] == "completed"
     assert (
         task_update_response.json()["provenance"]["evidence_source"]
@@ -114,7 +136,7 @@ async def test_confirmation_materializes_tasks_and_supports_explicit_lifecycle(
     assert action_update_response.status_code == 200
     assert (
         action_update_response.json()["actions"][0]["description"]
-        == "Open the resume and revise one backend bullet"
+        == "Polish one backend resume bullet"
     )
     assert (
         action_update_response.json()["actions"][0]["provenance"]["evidence_source"]

@@ -117,3 +117,25 @@ export async function setTaskStatus(
   });
   return taskResponse(response);
 }
+
+export async function updateTaskContent(
+  taskId: string,
+  actionId: string,
+  title: string,
+  actionDescription: string,
+  signal: AbortSignal = AbortSignal.timeout(TASK_REQUEST_TIMEOUT_MS),
+): Promise<Task> {
+  const response = await fetch(`${apiBaseUrl}/tasks/${taskId}/content`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title,
+      action_id: actionId,
+      action_description: actionDescription,
+    }),
+    signal,
+  });
+  return taskResponse(response);
+}

@@ -8,7 +8,13 @@ import {
   type ReviewedTask,
   type TaskProposal,
 } from "./api/interpretations";
-import { listTasks, setTaskStatus, type Task, type TaskStatus } from "./api/tasks";
+import {
+  listTasks,
+  setTaskStatus,
+  updateTaskContent,
+  type Task,
+  type TaskStatus,
+} from "./api/tasks";
 
 type Screen =
   | "loading"
@@ -18,6 +24,12 @@ type Screen =
   | "saved"
   | "task-list";
 type RequestState = "idle" | "submitting" | "error";
+interface TaskEditDraft {
+  taskId: string;
+  actionId: string;
+  title: string;
+  actionDescription: string;
+}
 
 function toReviewedTask(task: TaskProposal): ReviewedTask {
   return {
@@ -39,6 +51,7 @@ export function App() {
   const [taskListLoadFailed, setTaskListLoadFailed] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [taskUpdateFailed, setTaskUpdateFailed] = useState(false);
+  const [taskEditDraft, setTaskEditDraft] = useState<TaskEditDraft | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -161,6 +174,56 @@ export function App() {
               currentTask.id === updatedTask.id ? updatedTask : currentTask,
             ),
       );
+    } catch {
+      setTaskUpdateFailed(true);
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  }
+
+  function beginTaskEdit(task: Task) {
+    const firstAction = task.actions[0];
+    setTaskEditDraft({
+      taskId: task.id,
+      actionId: firstAction.id,
+      title: task.title,
+      actionDescription: firstAction.description,
+    });
+    setTaskUpdateFailed(false);
+  }
+
+  function updateTaskEditDraft(
+    field: "title" | "actionDescription",
+    value: string,
+  ) {
+    setTaskEditDraft((draft) => (draft === null ? null : { ...draft, [field]: value }));
+    setTaskUpdateFailed(false);
+  }
+
+  async function saveTaskContent(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (
+      taskEditDraft === null ||
+      updatingTaskId !== null ||
+      !taskEditDraft.title.trim() ||
+      !taskEditDraft.actionDescription.trim()
+    ) {
+      return;
+    }
+
+    setUpdatingTaskId(taskEditDraft.taskId);
+    setTaskUpdateFailed(false);
+    try {
+      const updatedTask = await updateTaskContent(
+        taskEditDraft.taskId,
+        taskEditDraft.actionId,
+        taskEditDraft.title,
+        taskEditDraft.actionDescription,
+      );
+      setTasks((currentTasks) =>
+        currentTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task)),
+      );
+      setTaskEditDraft(null);
     } catch {
       setTaskUpdateFailed(true);
     } finally {
@@ -580,55 +643,113 @@ export function App() {
                     <span className="task-number">
                       {String(index + 1).padStart(2, "0")}
                     </span>
-                    <div>
-                      <h2>{task.title}</h2>
-                      {task.status === "completed" && (
-                        <span className="task-status">Completed</span>
-                      )}
-                      <p>
-                        <span>Start with</span>
-                        {firstAction.description}
-                      </p>
-                      {(task.deadline || duration) && (
-                        <div className="task-signals" aria-label="Task details">
-                          {task.deadline && <span>Due {task.deadline.date}</span>}
-                          {duration && (
-                            <span>
-                              {duration.minimum_minutes === duration.maximum_minutes
-                                ? `${duration.minimum_minutes} min`
-                                : `${duration.minimum_minutes}–${duration.maximum_minutes} min`}
-                            </span>
-                          )}
+                    {taskEditDraft?.taskId === task.id ? (
+                      <form className="canonical-task-edit" onSubmit={saveTaskContent}>
+                        <label>
+                          <span>Task</span>
+                          <input
+                            value={taskEditDraft.title}
+                            onChange={(event) =>
+                              updateTaskEditDraft("title", event.target.value)
+                            }
+                            disabled={updatingTaskId !== null}
+                            autoFocus
+                          />
+                        </label>
+                        <label>
+                          <span>Starting action</span>
+                          <input
+                            value={taskEditDraft.actionDescription}
+                            onChange={(event) =>
+                              updateTaskEditDraft(
+                                "actionDescription",
+                                event.target.value,
+                              )
+                            }
+                            disabled={updatingTaskId !== null}
+                          />
+                        </label>
+                        <div className="task-edit-actions">
+                          <button
+                            type="submit"
+                            className="secondary-button"
+                            disabled={
+                              updatingTaskId !== null ||
+                              !taskEditDraft.title.trim() ||
+                              !taskEditDraft.actionDescription.trim()
+                            }
+                          >
+                            {updatingTaskId === task.id ? "Saving…" : "Save changes"}
+                          </button>
+                          <button
+                            type="button"
+                            className="archive-button"
+                            disabled={updatingTaskId !== null}
+                            onClick={() => setTaskEditDraft(null)}
+                          >
+                            Cancel
+                          </button>
                         </div>
-                      )}
-                      <div className="task-lifecycle-actions">
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          disabled={updatingTaskId !== null}
-                          onClick={() =>
-                            void changeTaskStatus(
-                              task,
-                              task.status === "completed" ? "active" : "completed",
-                            )
-                          }
-                        >
-                          {updatingTaskId === task.id
-                            ? "Saving…"
-                            : task.status === "completed"
-                              ? "Reopen"
-                              : "Mark complete"}
-                        </button>
-                        <button
-                          type="button"
-                          className="archive-button"
-                          disabled={updatingTaskId !== null}
-                          onClick={() => void changeTaskStatus(task, "archived")}
-                        >
-                          Archive
-                        </button>
+                      </form>
+                    ) : (
+                      <div>
+                        <h2>{task.title}</h2>
+                        {task.status === "completed" && (
+                          <span className="task-status">Completed</span>
+                        )}
+                        <p>
+                          <span>Start with</span>
+                          {firstAction.description}
+                        </p>
+                        {(task.deadline || duration) && (
+                          <div className="task-signals" aria-label="Task details">
+                            {task.deadline && <span>Due {task.deadline.date}</span>}
+                            {duration && (
+                              <span>
+                                {duration.minimum_minutes === duration.maximum_minutes
+                                  ? `${duration.minimum_minutes} min`
+                                  : `${duration.minimum_minutes}–${duration.maximum_minutes} min`}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <div className="task-lifecycle-actions">
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            disabled={updatingTaskId !== null}
+                            onClick={() =>
+                              void changeTaskStatus(
+                                task,
+                                task.status === "completed" ? "active" : "completed",
+                              )
+                            }
+                          >
+                            {updatingTaskId === task.id
+                              ? "Saving…"
+                              : task.status === "completed"
+                                ? "Reopen"
+                                : "Mark complete"}
+                          </button>
+                          <button
+                            type="button"
+                            className="archive-button"
+                            disabled={updatingTaskId !== null}
+                            onClick={() => beginTaskEdit(task)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="archive-button"
+                            disabled={updatingTaskId !== null}
+                            onClick={() => void changeTaskStatus(task, "archived")}
+                          >
+                            Archive
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </article>
                 );
               })}

@@ -73,6 +73,14 @@ class TaskUpdate(BaseModel):
         return self
 
 
+class TaskContentUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    title: NonBlankString
+    action_id: UUID
+    action_description: NonBlankString
+
+
 class ActionUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 

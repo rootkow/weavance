@@ -764,6 +764,50 @@ textarea::placeholder {
   margin-top: 0.7rem;
 }
 
+.canonical-task-edit {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.canonical-task-edit label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.canonical-task-edit label > span {
+  color: #8290a6;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.canonical-task-edit input {
+  width: 100%;
+  min-height: 2.7rem;
+  border: 1px solid #2c3a51;
+  border-radius: 0.72rem;
+  padding: 0.65rem 0.75rem;
+  color: #eef3f9;
+  background: rgba(14, 22, 37, 0.84);
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.canonical-task-edit input:hover:not(:disabled) {
+  border-color: #3a4d69;
+}
+
+.canonical-task-edit input:focus {
+  border-color: #67cfc1;
+  box-shadow: 0 0 0 3px rgba(103, 207, 193, 0.1);
+}
+
+.canonical-task-edit input:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.task-edit-actions,
 .task-lifecycle-actions {
   display: flex;
   align-items: center;
@@ -771,6 +815,7 @@ textarea::placeholder {
   margin-top: 0.9rem;
 }
 
+.task-edit-actions .secondary-button,
 .task-lifecycle-actions .secondary-button {
   min-height: 2.35rem;
   padding: 0.55rem 0.75rem;
@@ -790,6 +835,7 @@ textarea::placeholder {
 }
 
 .archive-button:disabled,
+.task-edit-actions .secondary-button:disabled,
 .task-lifecycle-actions .secondary-button:disabled {
   cursor: wait;
   opacity: 0.55;
