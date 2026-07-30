@@ -30,6 +30,7 @@ export interface Task {
   updated_at: string;
 }
 
+const TASK_REQUEST_TIMEOUT_MS = 15_000;
 const apiBaseUrl = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 
 function isAction(value: unknown): value is Action {
@@ -101,13 +102,18 @@ export async function listTasks(signal?: AbortSignal): Promise<Task[]> {
   return responseBody;
 }
 
-export async function setTaskStatus(taskId: string, status: TaskStatus): Promise<Task> {
+export async function setTaskStatus(
+  taskId: string,
+  status: TaskStatus,
+  signal: AbortSignal = AbortSignal.timeout(TASK_REQUEST_TIMEOUT_MS),
+): Promise<Task> {
   const response = await fetch(`${apiBaseUrl}/tasks/${taskId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ status }),
+    signal,
   });
   return taskResponse(response);
 }

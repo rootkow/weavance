@@ -107,6 +107,17 @@ async def materialize_confirmed_tasks(
     interpretation: Interpretation,
     proposal: InterpretationProposal,
 ) -> list[Task]:
+    capture_task_ids = select(Task.id).where(
+        Task.source_capture_id == interpretation.capture_id
+    )
+    await session.execute(
+        update(Action)
+        .where(
+            Action.task_id.in_(capture_task_ids),
+            Action.status != "archived",
+        )
+        .values(status="archived", updated_at=func.now())
+    )
     await session.execute(
         update(Task)
         .where(

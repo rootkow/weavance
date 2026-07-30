@@ -371,6 +371,32 @@ describe("App", () => {
     });
   });
 
+  it("keeps a successful confirmation saved when the task refresh fails", async () => {
+    const confirmedInterpretation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    const fetchMock = successfulFlowFetch()
+      .mockResolvedValueOnce(jsonResponse(confirmedInterpretation))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await submitBrainDump();
+    fireEvent.click(screen.getByRole("button", { name: "Looks right" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "That’s safely added." }),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Your review is saved, but I couldn’t refresh the task list.",
+    );
+    expect(screen.queryByRole("button", { name: "Looks right" })).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
   it("loads confirmed tasks without displaying the full list by default", async () => {
     const confirmedInterpretation = {
       ...interpretation,
@@ -434,6 +460,7 @@ describe("App", () => {
       expect.objectContaining({
         method: "PATCH",
         body: JSON.stringify({ status: "completed" }),
+        signal: expect.any(AbortSignal),
       }),
     );
 
@@ -447,6 +474,32 @@ describe("App", () => {
       expect(screen.queryByRole("heading", { name: activeTask.title })).not.toBeInTheDocument();
     });
     expect(screen.getByText("Nothing actionable is on your list yet.")).toBeInTheDocument();
+  });
+
+  it("uses the canonical task returned by a lifecycle update", async () => {
+    const confirmedInterpretation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    const [activeTask] = tasksFromInterpretations(confirmedInterpretation);
+    const canonicalTask = { ...activeTask, status: "completed" };
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse([activeTask], 200))
+        .mockResolvedValueOnce(jsonResponse(canonicalTask, 200)),
+    );
+    render(<App />);
+
+    await screen.findByText("1 existing task is safely stored.");
+    fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
+    fireEvent.click(screen.getByRole("button", { name: "Archive" }));
+
+    expect(await screen.findByText("Completed")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: activeTask.title })).toBeInTheDocument();
   });
 
   it("adds tasks from another brain dump without replacing the current list", async () => {

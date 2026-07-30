@@ -95,12 +95,18 @@ export function App() {
     setRequestState("submitting");
     try {
       await confirmInterpretation(interpretation, reviewedTasks);
-      setTasks(await listTasks());
-      setTaskListLoadFailed(false);
-      setScreen("saved");
-      setRequestState("idle");
     } catch {
       setRequestState("error");
+      return;
+    }
+
+    setScreen("saved");
+    setRequestState("idle");
+    try {
+      setTasks(await listTasks());
+      setTaskListLoadFailed(false);
+    } catch {
+      setTaskListLoadFailed(true);
     }
   }
 
@@ -149,10 +155,10 @@ export function App() {
     try {
       const updatedTask = await setTaskStatus(task.id, status);
       setTasks((currentTasks) =>
-        status === "archived"
-          ? currentTasks.filter((currentTask) => currentTask.id !== task.id)
+        updatedTask.status === "archived"
+          ? currentTasks.filter((currentTask) => currentTask.id !== updatedTask.id)
           : currentTasks.map((currentTask) =>
-              currentTask.id === task.id ? updatedTask : currentTask,
+              currentTask.id === updatedTask.id ? updatedTask : currentTask,
             ),
       );
     } catch {
@@ -501,6 +507,17 @@ export function App() {
                     reviewedTasks.length === 1 ? "task was" : "tasks were"
                   } added without changing anything you saved earlier.`}
             </p>
+            {taskListLoadFailed && (
+              <div className="error-message" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>Your review is saved, but I couldn’t refresh the task list.</strong>
+                  <p>The saved task will appear after the list loads successfully.</p>
+                </div>
+              </div>
+            )}
             <div className="success-actions">
               <button
                 type="button"
