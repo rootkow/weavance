@@ -4,11 +4,11 @@ import { createCapture, MAX_CAPTURE_CHARACTERS, type Capture } from "./api/captu
 import {
   confirmInterpretation,
   createInterpretation,
-  listConfirmedInterpretations,
   type Interpretation,
   type ReviewedTask,
   type TaskProposal,
 } from "./api/interpretations";
+import { listTasks, setTaskStatus, type Task, type TaskStatus } from "./api/tasks";
 
 type Screen =
   | "loading"
@@ -33,19 +33,19 @@ export function App() {
   const [capture, setCapture] = useState<Capture | null>(null);
   const [interpretation, setInterpretation] = useState<Interpretation | null>(null);
   const [reviewedTasks, setReviewedTasks] = useState<ReviewedTask[]>([]);
-  const [confirmedInterpretations, setConfirmedInterpretations] = useState<
-    Interpretation[]
-  >([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [screen, setScreen] = useState<Screen>("loading");
   const [requestState, setRequestState] = useState<RequestState>("idle");
   const [taskListLoadFailed, setTaskListLoadFailed] = useState(false);
+  const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
+  const [taskUpdateFailed, setTaskUpdateFailed] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    void listConfirmedInterpretations(controller.signal)
-      .then((confirmed) => {
-        setConfirmedInterpretations(confirmed);
+    void listTasks(controller.signal)
+      .then((savedTasks) => {
+        setTasks(savedTasks);
         setTaskListLoadFailed(false);
         setScreen("capture");
       })
@@ -94,21 +94,19 @@ export function App() {
 
     setRequestState("submitting");
     try {
-      const confirmed = await confirmInterpretation(interpretation, reviewedTasks);
-      setConfirmedInterpretations((interpretations) => {
-        const existingIndex = interpretations.findIndex(
-          (existing) => existing.capture_id === confirmed.capture_id,
-        );
-        if (existingIndex === -1) return [...interpretations, confirmed];
-
-        return interpretations.map((existing, index) =>
-          index === existingIndex ? confirmed : existing,
-        );
-      });
-      setScreen("saved");
-      setRequestState("idle");
+      await confirmInterpretation(interpretation, reviewedTasks);
     } catch {
       setRequestState("error");
+      return;
+    }
+
+    setScreen("saved");
+    setRequestState("idle");
+    try {
+      setTasks(await listTasks());
+      setTaskListLoadFailed(false);
+    } catch {
+      setTaskListLoadFailed(true);
     }
   }
 
@@ -150,12 +148,27 @@ export function App() {
     setRequestState("idle");
   }
 
-  const confirmedTasks = confirmedInterpretations.flatMap((confirmed) =>
-    confirmed.proposal.tasks.map((task) => ({
-      ...task,
-      captureId: confirmed.capture_id,
-    })),
-  );
+  async function changeTaskStatus(task: Task, status: TaskStatus) {
+    if (updatingTaskId !== null) return;
+    setUpdatingTaskId(task.id);
+    setTaskUpdateFailed(false);
+    try {
+      const updatedTask = await setTaskStatus(task.id, status);
+      setTasks((currentTasks) =>
+        updatedTask.status === "archived"
+          ? currentTasks.filter((currentTask) => currentTask.id !== updatedTask.id)
+          : currentTasks.map((currentTask) =>
+              currentTask.id === updatedTask.id ? updatedTask : currentTask,
+            ),
+      );
+    } catch {
+      setTaskUpdateFailed(true);
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  }
+
+  const confirmedTasks = tasks;
   const reviewIsValid = reviewedTasks.every(
     (task) => task.title.trim() && task.action_description.trim(),
   );
@@ -494,6 +507,17 @@ export function App() {
                     reviewedTasks.length === 1 ? "task was" : "tasks were"
                   } added without changing anything you saved earlier.`}
             </p>
+            {taskListLoadFailed && (
+              <div className="error-message" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>Your review is saved, but I couldn’t refresh the task list.</strong>
+                  <p>The saved task will appear after the list loads successfully.</p>
+                </div>
+              </div>
+            )}
             <div className="success-actions">
               <button
                 type="button"
@@ -551,13 +575,16 @@ export function App() {
                 return (
                   <article
                     className="current-task-card"
-                    key={`${task.captureId}:${task.id}`}
+                    key={task.id}
                   >
                     <span className="task-number">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <div>
                       <h2>{task.title}</h2>
+                      {task.status === "completed" && (
+                        <span className="task-status">Completed</span>
+                      )}
                       <p>
                         <span>Start with</span>
                         {firstAction.description}
@@ -574,6 +601,33 @@ export function App() {
                           )}
                         </div>
                       )}
+                      <div className="task-lifecycle-actions">
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          disabled={updatingTaskId !== null}
+                          onClick={() =>
+                            void changeTaskStatus(
+                              task,
+                              task.status === "completed" ? "active" : "completed",
+                            )
+                          }
+                        >
+                          {updatingTaskId === task.id
+                            ? "Saving…"
+                            : task.status === "completed"
+                              ? "Reopen"
+                              : "Mark complete"}
+                        </button>
+                        <button
+                          type="button"
+                          className="archive-button"
+                          disabled={updatingTaskId !== null}
+                          onClick={() => void changeTaskStatus(task, "archived")}
+                        >
+                          Archive
+                        </button>
+                      </div>
                     </div>
                   </article>
                 );
@@ -586,6 +640,18 @@ export function App() {
                 </div>
               )}
             </div>
+
+            {taskUpdateFailed && (
+              <div className="error-message" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>I couldn’t update that task.</strong>
+                  <p>Nothing else changed. Try again when you’re ready.</p>
+                </div>
+              </div>
+            )}
 
             <div className="task-list-footer">
               <p>

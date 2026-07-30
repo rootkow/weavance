@@ -89,9 +89,9 @@ again.
 ## Development stage
 
 Weavance is under active development. The working prototype currently covers capture,
-interpretation, structured review, and preserving confirmed tasks across brain dumps. It does not
-yet create bounded recommendation episodes, collect outcomes, or provide the re-entry flow
-described above.
+interpretation, structured review, canonical task/action persistence, and explicit task lifecycle
+updates across brain dumps. It does not yet create bounded recommendation episodes, collect
+outcomes, or provide the re-entry flow described above.
 
 See the [MVP scope](docs/mvp.md) for current progress and acceptance criteria.
 

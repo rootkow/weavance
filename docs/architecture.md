@@ -9,18 +9,21 @@
 | Interpretation request, proposal models, and interpreter protocol | Implemented and tested in isolation |
 | Interpretation orchestration and versioned proposal persistence | Implemented with a line-based fallback |
 | Structured task and first-action review | Implemented; richer interpreted details remain read-only |
-| Cumulative confirmed-task read model and secondary UI | Implemented |
-| Canonical task and action lifecycle | Planned |
+| Canonical task and action materialization | Implemented at confirmation, with migration backfill |
+| Canonical task and action lifecycle | Implemented for listing, editing, completion, reopening, and archival |
+| Secondary task-management UI | Implemented for completion, reopening, and archival; inline editing remains API-only |
 | Bounded recommendation episodes, outcomes, and re-entry | Planned |
 | Raw capture and complete proposal-history UI | Not designed yet |
 
 The current user-facing path saves a capture, creates a versioned interpretation, and lets the user
-add, edit, or remove proposed tasks and starting actions. Confirmation creates another immutable
-interpretation version with user-correction provenance. The latest confirmed version from every
-capture is restored when the application loads, but the cumulative list stays hidden until the
-user explicitly opens it. The path currently ends there: there is no task lifecycle, full history
-surface, explicit context snapshot, bounded recommendation episode, outcome reporting, or re-entry
-yet.
+add, edit, or remove proposed tasks and starting actions. Confirmation atomically creates another
+immutable interpretation version and materializes its reviewed tasks and actions as canonical
+application state. Reinterpreting and reconfirming the same capture archives the prior canonical
+projection without deleting its history. The application restores non-archived canonical tasks
+when it loads, but the list stays hidden until the user explicitly opens it. The secondary list
+supports completion, reopening, and archival. The path currently ends there: there is no full
+history surface, explicit context snapshot, bounded recommendation episode, outcome reporting, or
+re-entry yet.
 
 ## Target system boundaries
 
@@ -115,10 +118,9 @@ added when the interpretation workflow provides meaningful signals to observe. S
 3. The API validates and stores it as a new versioned interpretation linked to the capture.
 4. The current structured review records user additions, edits, removals, and confirmation as a new
    version.
-5. The current task-list read model selects the latest confirmed version for every capture and,
-   when explicitly opened, presents their tasks together without rewriting interpretation history.
-6. Confirmation will materialize canonical tasks and actions while preserving their links to
-   capture and interpretation history.
+5. Confirmation materializes canonical tasks and actions in the same transaction while preserving
+   their links to capture and interpretation history.
+6. The task API lists and updates canonical state without rewriting that source history.
 7. Future reviews should narrow questions to ambiguity that would materially change the next
    action.
 8. Deterministic policy will remove ineligible actions and apply explicit user intent.
