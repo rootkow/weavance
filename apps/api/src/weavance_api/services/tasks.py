@@ -12,7 +12,7 @@ from weavance_api.interpretation import (
 )
 from weavance_api.models import Action, Interpretation, Task
 from weavance_api.observability import get_logger
-from weavance_api.schemas.task import ActionUpdate, TaskUpdate
+from weavance_api.schemas.task import ActionUpdate, TaskContentUpdate, TaskUpdate
 
 logger = get_logger(__name__)
 
@@ -62,6 +62,44 @@ async def update_task(
         task_id=task.id,
         title_changed=update.title is not None,
         status=task.status,
+    )
+    return task
+
+
+async def update_task_content(
+    session: AsyncSession,
+    *,
+    task_id: UUID,
+    update: TaskContentUpdate,
+) -> Task:
+    task = await session.scalar(
+        select(Task).options(selectinload(Task.actions)).where(Task.id == task_id)
+    )
+    if task is None:
+        raise TaskNotFoundError
+
+    action = next((item for item in task.actions if item.id == update.action_id), None)
+    if action is None:
+        raise ActionNotFoundError
+
+    title_changed = task.title != update.title
+    description_changed = action.description != update.action_description
+    if title_changed:
+        task.title = update.title
+        task.provenance = _user_correction_provenance()
+    if description_changed:
+        action.description = update.action_description
+        action.provenance = _user_correction_provenance()
+
+    await session.commit()
+    await session.refresh(task, attribute_names=["updated_at"])
+    await session.refresh(action, attribute_names=["updated_at"])
+    logger.info(
+        "task.content.updated",
+        task_id=task.id,
+        action_id=action.id,
+        title_changed=title_changed,
+        description_changed=description_changed,
     )
     return task
 

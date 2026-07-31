@@ -5,13 +5,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from weavance_api.database import get_session
-from weavance_api.schemas.task import ActionUpdate, TaskResponse, TaskUpdate
+from weavance_api.schemas.task import (
+    ActionUpdate,
+    TaskContentUpdate,
+    TaskResponse,
+    TaskUpdate,
+)
 from weavance_api.services.tasks import (
     ActionNotFoundError,
     TaskNotFoundError,
     list_tasks,
     update_action,
     update_task,
+    update_task_content,
 )
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -35,6 +41,23 @@ async def update_task_endpoint(
     try:
         task = await update_task(session, task_id=task_id, update=request)
     except TaskNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
+    return TaskResponse.model_validate(task)
+
+
+@router.patch("/{task_id}/content", response_model=TaskResponse)
+async def update_task_content_endpoint(
+    task_id: UUID,
+    request: TaskContentUpdate,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> TaskResponse:
+    try:
+        task = await update_task_content(
+            session,
+            task_id=task_id,
+            update=request,
+        )
+    except (TaskNotFoundError, ActionNotFoundError) as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
     return TaskResponse.model_validate(task)
 
