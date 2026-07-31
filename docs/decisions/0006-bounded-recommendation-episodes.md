@@ -60,6 +60,17 @@ the accepted commitment.
 completed only through a separate explicit user action. Archived tasks remain linked to their
 capture, interpretation, action, and episode history.
 
+The initial UI keeps the label **Done for now** and pairs it with **I reached this stopping
+point**. The confirmation view repeats that this outcome applies only to the bounded commitment.
+Whether the label still sounds like postponement remains an explicit dogfooding question rather
+than being decided from assumption.
+
+A countdown or running timer is not part of the initial recommendation experience. A time-based
+stopping condition and a timer are separate concepts. If a focus timer is added later, it must be
+disabled by default and available only through explicit opt-in on a future Settings page. This
+protects users who experience timers as rushing or pressure while leaving room for users who find
+them helpful for focus.
+
 After `progress_made` or another interruption, the user may save a short `ReentryCheckpoint`
 describing where they stopped. A later recommendation can use that checkpoint to offer a smaller
 way back into the same task rather than resurfacing the task unchanged.

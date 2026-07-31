@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
+import type { Recommendation } from "./api/recommendations";
 
 const capture = {
   id: "a127eea6-fc28-447c-a990-04ee6487de09",
@@ -114,6 +115,65 @@ function tasksFromInterpretations(...confirmedInterpretations: TestInterpretatio
       })),
     })),
   );
+}
+
+function recommendationForTask(
+  task: ReturnType<typeof tasksFromInterpretations>[number],
+  state: "proposed" | "accepted" | "closed" = "proposed",
+): Recommendation {
+  return {
+    id: `recommendation-${task.id}`,
+    task_id: task.id,
+    action_id: task.actions[0].id,
+    parent_episode_id: null,
+    task_title: task.title,
+    action_description: task.actions[0].description,
+    entry_point: task.actions[0].description,
+    stopping_condition: `You have completed this starting action. “${task.title}” can remain open.`,
+    context_snapshot: {
+      available_minutes: null,
+      easier_requested: false,
+      constraints: [],
+    },
+    explanation_factors: [
+      { kind: "fallback", value: "stable_active_starting_action" },
+    ],
+    reason: "This is an active starting action, kept to one bounded commitment.",
+    strategy_name: "transparent-bounded-action",
+    strategy_version: "1",
+    state,
+    created_at: "2026-07-30T14:00:00Z",
+  };
+}
+
+function recommendationTransition(
+  recommendation: Recommendation,
+  eventType:
+    | "accepted"
+    | "resized"
+    | "deferred"
+    | "swapped"
+    | "overwhelmed"
+    | "done_for_now"
+    | "progress_made"
+    | "did_not_start"
+    | "keep_going",
+  replacement: Recommendation | null = null,
+) {
+  return {
+    event: {
+      id: `event-${eventType}`,
+      episode_id: recommendation.id,
+      event_type: eventType,
+      payload: {},
+      created_at: "2026-07-30T14:01:00Z",
+    },
+    episode: {
+      ...recommendation,
+      state: eventType === "accepted" ? "accepted" : "closed",
+    },
+    replacement,
+  };
 }
 
 function jsonResponse(body: unknown, status = 201): Response {
@@ -397,27 +457,192 @@ describe("App", () => {
     expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 
-  it("loads confirmed tasks without displaying the full list by default", async () => {
+  it("turns a recommendation into an active commitment and records Done for now", async () => {
     const confirmedInterpretation = {
       ...interpretation,
       id: "2ed72150-36e9-4682-ad27-db1031b77de9",
       version: 2,
       status: "confirmed",
     };
+    const [activeTask] = tasksFromInterpretations(confirmedInterpretation);
+    const proposedRecommendation = recommendationForTask(activeTask);
+    const acceptedRecommendation = {
+      ...proposedRecommendation,
+      state: "accepted" as const,
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse([activeTask], 200))
+      .mockResolvedValueOnce(jsonResponse(proposedRecommendation, 200))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          recommendationTransition(proposedRecommendation, "accepted"),
+        ),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          recommendationTransition(acceptedRecommendation, "done_for_now"),
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: activeTask.actions[0].description,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Why this?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Start" }));
+
+    expect(await screen.findByText("What happened?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /Done for now.*I reached this stopping point/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /timer/i }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /Done for now.*I reached this stopping point/,
+      }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "You met this stopping point.",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/applies to this bounded commitment/),
+    ).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      `/recommendations/${proposedRecommendation.id}/events`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ event_type: "accepted" }),
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      `/recommendations/${proposedRecommendation.id}/events`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ event_type: "done_for_now" }),
+      }),
+    );
+  });
+
+  it("restores an accepted commitment without inferring an outcome", async () => {
+    const confirmedInterpretation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    const [activeTask] = tasksFromInterpretations(confirmedInterpretation);
+    const acceptedRecommendation = recommendationForTask(activeTask, "accepted");
     vi.stubGlobal(
       "fetch",
       vi
         .fn()
-        .mockResolvedValue(jsonResponse(tasksFromInterpretations(confirmedInterpretation), 200)),
+        .mockResolvedValueOnce(jsonResponse([activeTask], 200))
+        .mockResolvedValueOnce(jsonResponse(acceptedRecommendation, 200)),
+    );
+    render(<App />);
+
+    expect(await screen.findByText("Your commitment")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Choose only when you’re ready. Until then, Weavance won’t assume an outcome.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/does not mark/)).toBeInTheDocument();
+  });
+
+  it("reduces decisions after the user reports feeling overwhelmed", async () => {
+    const confirmedInterpretation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    const [activeTask] = tasksFromInterpretations(confirmedInterpretation);
+    const proposedRecommendation = recommendationForTask(activeTask);
+    const preparationRecommendation = {
+      ...recommendationForTask(activeTask),
+      id: `overwhelmed-${activeTask.id}`,
+      parent_episode_id: proposedRecommendation.id,
+      entry_point: `Put the first thing you need for “${activeTask.actions[0].description}” in front of you.`,
+      stopping_condition:
+        "The relevant app, document, object, or contact is ready. Nothing else is required.",
+      explanation_factors: [
+        { kind: "explicit_response", value: "overwhelmed" },
+      ],
+      reason:
+        "You asked for less to decide, so this is only a preparation step.",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse([activeTask], 200))
+        .mockResolvedValueOnce(jsonResponse(proposedRecommendation, 200))
+        .mockResolvedValueOnce(
+          jsonResponse(
+            recommendationTransition(
+              proposedRecommendation,
+              "overwhelmed",
+              preparationRecommendation,
+            ),
+          ),
+        ),
+    );
+    render(<App />);
+
+    await screen.findByText("One bounded step");
+    fireEvent.click(screen.getByRole("button", { name: "I’m overwhelmed" }));
+
+    expect(await screen.findByText("Only a preparation step")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause here" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Different task" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "View all tasks" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("loads one recommendation instead of displaying the full task list by default", async () => {
+    const confirmedInterpretation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    const savedTasks = tasksFromInterpretations(confirmedInterpretation);
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(jsonResponse(savedTasks, 200))
+        .mockResolvedValueOnce(
+          jsonResponse(recommendationForTask(savedTasks[0]), 200),
+        ),
     );
 
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: "What’s taking up space right now?" }),
+      await screen.findByRole("heading", { name: "Update my resume" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Update my resume" })).not.toBeInTheDocument();
-    expect(screen.getByText("2 existing tasks are safely stored.")).toBeInTheDocument();
+    expect(screen.getByText("One bounded step")).toBeInTheDocument();
+    expect(screen.getByText("You’re done when")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Do laundry" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
 
     expect(
@@ -451,11 +676,14 @@ describe("App", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse([activeTask], 200))
+      .mockResolvedValueOnce(
+        jsonResponse(recommendationForTask(activeTask), 200),
+      )
       .mockResolvedValueOnce(jsonResponse(updatedTask, 200));
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
-    await screen.findByText("1 existing task is safely stored.");
+    await screen.findByText("One bounded step");
     fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     fireEvent.change(screen.getByLabelText("Task"), {
@@ -471,7 +699,7 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(updatedTask.actions[0].description)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
+      3,
       `/tasks/${activeTask.id}/content`,
       expect.objectContaining({
         method: "PATCH",
@@ -499,20 +727,23 @@ describe("App", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(jsonResponse([activeTask], 200))
+      .mockResolvedValueOnce(
+        jsonResponse(recommendationForTask(activeTask), 200),
+      )
       .mockResolvedValueOnce(jsonResponse(completedTask, 200))
       .mockResolvedValueOnce(jsonResponse(reopenedTask, 200))
       .mockResolvedValueOnce(jsonResponse(archivedTask, 200));
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
-    await screen.findByText("1 existing task is safely stored.");
+    await screen.findByText("One bounded step");
     fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
     fireEvent.click(screen.getByRole("button", { name: "Mark complete" }));
 
     expect(await screen.findByText("Completed")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reopen" })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
+      3,
       `/tasks/${activeTask.id}`,
       expect.objectContaining({
         method: "PATCH",
@@ -547,11 +778,14 @@ describe("App", () => {
       vi
         .fn()
         .mockResolvedValueOnce(jsonResponse([activeTask], 200))
+        .mockResolvedValueOnce(
+          jsonResponse(recommendationForTask(activeTask), 200),
+        )
         .mockResolvedValueOnce(jsonResponse(canonicalTask, 200)),
     );
     render(<App />);
 
-    await screen.findByText("1 existing task is safely stored.");
+    await screen.findByText("One bounded step");
     fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
     fireEvent.click(screen.getByRole("button", { name: "Archive" }));
 
@@ -601,27 +835,25 @@ describe("App", () => {
       version: 2,
       status: "confirmed",
     };
+    const firstTasks = tasksFromInterpretations(firstConfirmation);
+    const allTasks = tasksFromInterpretations(firstConfirmation, secondConfirmation);
+    const firstRecommendation = recommendationForTask(firstTasks[0]);
     const fetchMock = successfulFlowFetch()
       .mockResolvedValueOnce(jsonResponse(firstConfirmation))
-      .mockResolvedValueOnce(
-        jsonResponse(tasksFromInterpretations(firstConfirmation), 200),
-      )
+      .mockResolvedValueOnce(jsonResponse(firstTasks, 200))
+      .mockResolvedValueOnce(jsonResponse(firstRecommendation))
       .mockResolvedValueOnce(jsonResponse(secondCapture))
       .mockResolvedValueOnce(jsonResponse(secondInterpretation))
       .mockResolvedValueOnce(jsonResponse(secondConfirmation))
-      .mockResolvedValueOnce(
-        jsonResponse(
-          tasksFromInterpretations(firstConfirmation, secondConfirmation),
-          200,
-        ),
-      );
+      .mockResolvedValueOnce(jsonResponse(allTasks, 200))
+      .mockResolvedValueOnce(jsonResponse(firstRecommendation));
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
     await submitBrainDump();
     fireEvent.click(screen.getByRole("button", { name: "Looks right" }));
-    await screen.findByRole("heading", { name: "That’s safely added." });
-    fireEvent.click(screen.getByRole("button", { name: "Add another brain dump" }));
+    await screen.findByText("That’s added. Here’s one place to begin");
+    fireEvent.click(screen.getByRole("button", { name: "Add a brain dump" }));
 
     expect(
       screen.getByText("2 existing tasks are safely stored."),
@@ -637,8 +869,7 @@ describe("App", () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Looks right" }));
 
-    await screen.findByRole("heading", { name: "That’s safely added." });
-    expect(screen.queryByRole("heading", { name: "Update my resume" })).not.toBeInTheDocument();
+    await screen.findByText("That’s added. Here’s one place to begin");
     fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
 
     await screen.findByText("3 tasks");
@@ -699,26 +930,29 @@ describe("App", () => {
         ],
       },
     };
+    const initialTasks = tasksFromInterpretations(firstConfirmation, secondConfirmation);
+    const updatedTasks = tasksFromInterpretations(
+      updatedFirstConfirmation,
+      secondConfirmation,
+    );
+    const existingRecommendation = recommendationForTask(initialTasks[0]);
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(
-        jsonResponse(tasksFromInterpretations(firstConfirmation, secondConfirmation), 200),
-      )
+      .mockResolvedValueOnce(jsonResponse(initialTasks, 200))
+      .mockResolvedValueOnce(jsonResponse(existingRecommendation, 200))
       .mockResolvedValueOnce(jsonResponse(capture))
       .mockResolvedValueOnce(jsonResponse(interpretation))
       .mockResolvedValueOnce(jsonResponse(updatedFirstConfirmation))
-      .mockResolvedValueOnce(
-        jsonResponse(
-          tasksFromInterpretations(updatedFirstConfirmation, secondConfirmation),
-          200,
-        ),
-      );
+      .mockResolvedValueOnce(jsonResponse(updatedTasks, 200))
+      .mockResolvedValueOnce(jsonResponse(existingRecommendation));
     vi.stubGlobal("fetch", fetchMock);
     render(<App />);
 
+    await screen.findByText("One bounded step");
+    fireEvent.click(screen.getByRole("button", { name: "Add a brain dump" }));
     await submitBrainDump();
     fireEvent.click(screen.getByRole("button", { name: "Looks right" }));
-    await screen.findByRole("heading", { name: "That’s safely added." });
+    await screen.findByText("That’s added. Here’s one place to begin");
     fireEvent.click(screen.getByRole("button", { name: "View all tasks" }));
 
     expect(

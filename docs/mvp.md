@@ -24,10 +24,10 @@ Status: **Complete**
 | 2. Interpret it as typed, versioned task and action proposals | Complete | A replaceable line-based fallback creates validated proposals and PostgreSQL stores every version |
 | 3. Let the user confirm or correct material assumptions | In progress | The structured review supports adding, editing, and removing tasks and first actions; richer interpreted details are not editable yet |
 | 4. Materialize canonical tasks and actions | Complete | Confirmation creates lifecycle-aware application state without rewriting capture or interpretation history; task and first-action editing plus completion/reopening/archival are available in the secondary UI |
-| 5. Collect an explicit context snapshot | Planned | Available time, a request for something easier, and known constraints remain optional and user-sourced |
-| 6. Create one bounded recommendation episode | Planned | A deterministic strategy selects a policy-eligible action and records its entry point, stopping condition, reason, and strategy version |
-| 7. Accept a pre-start response | Planned | Start, resize, defer, swap, and overwhelmed are explicit episode events |
-| 8. Record an honest outcome | Planned | Acceptance, reported work, bounded-action completion, and persistent-task completion remain separate |
+| 5. Collect an explicit context snapshot | In progress | Every episode persists the typed snapshot used for selection; UI collection of available time, easier work, and constraints remains planned |
+| 6. Create one bounded recommendation episode | Complete | A deterministic strategy selects an eligible active action and records its entry point, textual stopping condition, explanation factors, reason, and strategy version |
+| 7. Accept a pre-start response | Complete | Start, resize, defer, swap, and overwhelmed are persisted as explicit append-only events; resize, swap, and overwhelm can create replacement episodes |
+| 8. Record an honest outcome | Complete | The focused commitment view records done for now, progress, did not start, and keep going without completing the persistent task |
 | 9. Offer a re-entry action | Planned | Partial progress can preserve a checkpoint for a later bounded recommendation |
 
 The five initial responses are:
@@ -35,7 +35,7 @@ The five initial responses are:
 - Start
 - Make it smaller
 - Not right now
-- Swap task
+- Different task
 - I'm overwhelmed
 
 Selecting **Start** accepts the recommendation and makes it the active commitment. It does not
@@ -47,7 +47,14 @@ prove that work began. The initial outcome choices are:
 - I want to keep going
 
 **Done for now** satisfies the bounded commitment. The persistent task remains open until the user
-explicitly completes it. If the user does not report an outcome, the outcome remains unknown.
+explicitly completes it. The focused UI currently adds the supporting description **I reached this
+stopping point** and explains the boundary again after selection. The label remains under review
+after dogfooding because it may also be read as postponement. If the user does not report an
+outcome, the outcome remains unknown.
+
+The initial experience has no countdown or timer UI. A possible future focus timer is a separate,
+optional feature: it must remain disabled by default and require explicit opt-in through a future
+Settings page.
 
 ## Explicit non-goals
 

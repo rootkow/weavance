@@ -88,10 +88,10 @@ again.
 
 ## Development stage
 
-Weavance is under active development. The working prototype currently covers capture,
-interpretation, structured review, canonical task/action persistence, and explicit task lifecycle
-updates across brain dumps. It does not yet create bounded recommendation episodes, collect
-outcomes, or provide the re-entry flow described above.
+Weavance is under active development. The working prototype covers capture, interpretation,
+structured review, canonical task/action persistence, explicit task lifecycle updates, persisted
+bounded recommendations, pre-start responses, and reported outcomes. It does not yet collect
+context through the UI or provide re-entry checkpoints after partial progress.
 
 See the [MVP scope](docs/mvp.md) for current progress and acceptance criteria.
 
@@ -132,8 +132,9 @@ The API defaults work with the Compose database. To customize them, copy
 `apps/api/.env.example` to `apps/api/.env` and edit the values.
 
 No model provider or API key is required. The current prototype uses a deterministic line-based
-fallback that turns each nonblank line into an editable task and starting action. A future hosted
-or local model can replace it through the provider-neutral interpretation boundary.
+fallback that turns each nonblank line into an editable task and starting action, followed by a
+transparent deterministic recommendation strategy. Future hosted or local models can replace
+either strategy through their provider-neutral boundaries.
 
 Start PostgreSQL and apply the schema:
 

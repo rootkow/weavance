@@ -42,16 +42,15 @@ reconstruct the plan.
 
 ## Interaction priority
 
-Until bounded recommendations exist, the current brain-dump-first startup remains appropriate.
-Once the recommendation loop is usable, the main interface should prioritize:
+The main interface prioritizes:
 
-1. An active commitment or re-entry opportunity
+1. An active commitment
 2. A pending interpretation review
-3. A request for one place to start
+3. One bounded recommendation from the saved task set
 4. A new brain dump
 
 The full task list remains available through an explicit action instead of becoming the default
-screen.
+screen. A future re-entry opportunity will take precedence once checkpoints exist.
 
 ## Initial user
 
@@ -63,11 +62,14 @@ decisions in the builder's lived experience.
 The earliest meaningful signal is whether a bounded recommendation helps the user begin and
 whether they can find a manageable way back after an interruption.
 
-For the first dogfooding period, the product should eventually track:
+For the first dogfooding period, the product currently records:
 
 - Recommendation accepted, resized, deferred, swapped, or overwhelmed
 - User-reported outcome: done for now, progress made, did not start, or keep going
 - Whether the promised stopping point was honored
+
+It should later add:
+
 - Optional feedback that the recommendation helped or added pressure
 - Whether a later re-entry recommendation was accepted
 

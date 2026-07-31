@@ -12,7 +12,9 @@
 | Canonical task and action materialization | Implemented at confirmation, with migration backfill |
 | Canonical task and action lifecycle | Implemented for listing, editing, completion, reopening, and archival |
 | Secondary task-management UI | Implemented for task and first-action editing, completion, reopening, and archival |
-| Bounded recommendation episodes, outcomes, and re-entry | Planned |
+| Bounded recommendation episodes | Implemented with a transparent deterministic strategy and persisted context/explanation snapshots |
+| Pre-start responses and reported outcomes | Implemented as append-only episode events |
+| Re-entry checkpoints | Planned |
 | Raw capture and complete proposal-history UI | Not designed yet |
 
 The current user-facing path saves a capture, creates a versioned interpretation, and lets the user
@@ -21,9 +23,11 @@ immutable interpretation version and materializes its reviewed tasks and actions
 application state. Reinterpreting and reconfirming the same capture archives the prior canonical
 projection without deleting its history. The application restores non-archived canonical tasks
 when it loads, but the list stays hidden until the user explicitly opens it. The secondary list
-supports editing the task and its first action along with completion, reopening, and archival. The
-path currently ends there: there is no full history surface, explicit context snapshot, bounded
-recommendation episode, outcome reporting, or re-entry yet.
+supports editing the task and its first action along with completion, reopening, and archival.
+When active work exists, startup restores an accepted commitment or presents one recommendation
+instead of defaulting to capture. Confirmation also proceeds directly to a recommendation. Start,
+resize, defer, swap, overwhelm, and outcome responses are stored as append-only evidence. UI
+collection of richer context, a full history surface, and re-entry checkpoints remain planned.
 
 ## Target system boundaries
 
@@ -54,10 +58,12 @@ dependency eligibility, completed or canceled state, and the precedence of user 
 Subjective values such as task duration remain sourced estimates for the recommendation strategy
 to consider.
 
-The recommendation strategy chooses among policy-eligible actions using an explicit context
-snapshot. The first strategy may use transparent rules; later strategies may use a model,
-personalization, or a hybrid. Every result is validated by policy before it is stored as a
-bounded recommendation episode.
+The current recommendation strategy chooses among active task/action pairs using the episode's
+explicit context snapshot. It prefers known deadlines, can consider recorded importance and
+duration when available, avoids immediately repeating the most recently closed task when another
+candidate exists, and otherwise uses stable creation order with an honest fallback explanation. It
+never describes unknown difficulty or capacity as fact. Later strategies may use a model,
+personalization, or a hybrid without changing the episode lifecycle.
 
 ## Knowledge and uncertainty
 
@@ -87,9 +93,8 @@ unknown unless asking would materially change the recommendation.
 | `ReentryCheckpoint` | Preserves where the user stopped and a useful way back into unfinished work |
 
 `Task` and `Action` remain separate. “Update my resume” can be a long-lived task; “revise the
-summary” is a startable action. A recommendation episode can turn that action into “revise the
-summary for 10 minutes,” adding the current commitment and its stopping boundary without claiming
-that the larger task will be completed.
+summary” is a startable action. A recommendation episode adds a textual stopping boundary without
+claiming that the larger task will be completed.
 
 Accepting an episode does not prove work began. “Done for now” satisfies the bounded commitment,
 not the persistent task. Task completion is an explicit user action, and a missing outcome remains
@@ -103,9 +108,10 @@ different questions:
 - Structured logs, metrics, and traces describe how a request or background operation executed.
 - Versioned PostgreSQL records describe why an interpretation or recommendation was produced.
 
-Structured request, capture, and interpretation events, request IDs, safe metadata, local console
-formatting, and deployed JSON formatting are implemented. User-authored content stays out of
-routine logs. Versioned interpretation history is implemented; recommendation history is planned.
+Structured request, capture, interpretation, and recommendation events, request IDs, safe
+metadata, local console formatting, and deployed JSON formatting are implemented. User-authored
+content stays out of routine logs. Versioned interpretation history and append-only recommendation
+history are implemented.
 
 OpenTelemetry is the planned instrumentation boundary, with Prometheus, Loki, Tempo, and Grafana
 added when the interpretation workflow provides meaningful signals to observe. See
@@ -123,11 +129,13 @@ added when the interpretation workflow provides meaningful signals to observe. S
 6. The task API lists and updates canonical state without rewriting that source history.
 7. Future reviews should narrow questions to ambiguity that would materially change the next
    action.
-8. Deterministic policy will remove ineligible actions and apply explicit user intent.
-9. A replaceable strategy will combine eligible actions with an explicit context snapshot and
-   propose one bounded commitment.
-10. Policy will validate the entry point, stopping condition, and explanation before the API
-    stores the recommendation episode.
-11. Episode events will record explicit responses and reported outcomes without inferring an
-    answer from silence.
+8. Deterministic policy removes inactive tasks and actions from consideration.
+9. The replaceable strategy combines eligible actions with the typed context snapshot and stores
+   one bounded recommendation episode.
+10. The focused UI presents the entry point, stopping condition, and concise reason.
+11. Episode events record explicit responses and reported outcomes without inferring an answer
+    from silence. Replacement and follow-on recommendations receive new immutable boundaries.
 12. Partial progress may create a checkpoint for a future re-entry episode.
+
+The API and lifecycle details are documented in the
+[recommendation contract](recommendation-contract.md).

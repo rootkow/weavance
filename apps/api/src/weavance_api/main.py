@@ -9,6 +9,7 @@ from weavance_api import __version__
 from weavance_api.api.captures import router as captures_router
 from weavance_api.api.interpretations import list_router as interpretation_list_router
 from weavance_api.api.interpretations import router as interpretations_router
+from weavance_api.api.recommendations import router as recommendations_router
 from weavance_api.api.tasks import router as tasks_router
 from weavance_api.config import get_settings
 from weavance_api.database import engine
@@ -44,6 +45,7 @@ app.include_router(captures_router)
 app.include_router(interpretation_list_router)
 app.include_router(interpretations_router)
 app.include_router(tasks_router)
+app.include_router(recommendations_router)
 
 
 @app.get("/health", response_model=HealthResponse)
