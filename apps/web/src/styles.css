@@ -822,6 +822,7 @@ textarea::placeholder {
   font-size: 0.76rem;
 }
 
+.text-button,
 .archive-button {
   padding: 0.35rem 0;
   color: #8491a6;
@@ -830,10 +831,15 @@ textarea::placeholder {
   font-weight: 680;
 }
 
+.text-button:hover:not(:disabled) {
+  color: #d9e1ed;
+}
+
 .archive-button:hover:not(:disabled) {
   color: #f0aaa2;
 }
 
+.text-button:disabled,
 .archive-button:disabled,
 .task-edit-actions .secondary-button:disabled,
 .task-lifecycle-actions .secondary-button:disabled {

@@ -683,7 +683,7 @@ export function App() {
                           </button>
                           <button
                             type="button"
-                            className="archive-button"
+                            className="text-button"
                             disabled={updatingTaskId !== null}
                             onClick={() => setTaskEditDraft(null)}
                           >
@@ -733,7 +733,7 @@ export function App() {
                           </button>
                           <button
                             type="button"
-                            className="archive-button"
+                            className="text-button"
                             disabled={updatingTaskId !== null}
                             onClick={() => beginTaskEdit(task)}
                           >
