@@ -9,6 +9,13 @@ import {
   type TaskProposal,
 } from "./api/interpretations";
 import {
+  createRecommendation,
+  getCurrentRecommendation,
+  recordRecommendationEvent,
+  type EpisodeEventType,
+  type Recommendation,
+} from "./api/recommendations";
+import {
   listTasks,
   setTaskStatus,
   updateTaskContent,
@@ -18,6 +25,9 @@ import {
 
 type Screen =
   | "loading"
+  | "recommendation"
+  | "active-commitment"
+  | "outcome"
   | "capture"
   | "interpreting"
   | "review"
@@ -46,6 +56,13 @@ export function App() {
   const [interpretation, setInterpretation] = useState<Interpretation | null>(null);
   const [reviewedTasks, setReviewedTasks] = useState<ReviewedTask[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [lastEpisodeEvent, setLastEpisodeEvent] = useState<EpisodeEventType | null>(null);
+  const [recommendationRequestState, setRecommendationRequestState] =
+    useState<RequestState>("idle");
+  const [recommendationLoadFailed, setRecommendationLoadFailed] = useState(false);
+  const [recommendationFollowsReview, setRecommendationFollowsReview] =
+    useState(false);
   const [screen, setScreen] = useState<Screen>("loading");
   const [requestState, setRequestState] = useState<RequestState>("idle");
   const [taskListLoadFailed, setTaskListLoadFailed] = useState(false);
@@ -57,10 +74,34 @@ export function App() {
     const controller = new AbortController();
 
     void listTasks(controller.signal)
-      .then((savedTasks) => {
+      .then(async (savedTasks) => {
         setTasks(savedTasks);
         setTaskListLoadFailed(false);
-        setScreen("capture");
+        if (
+          !savedTasks.some(
+            (task) =>
+              task.status === "active" &&
+              task.actions.some((action) => action.status === "active"),
+          )
+        ) {
+          setScreen("capture");
+          return;
+        }
+
+        try {
+          const current =
+            (await getCurrentRecommendation(controller.signal)) ??
+            (await createRecommendation(controller.signal));
+          setRecommendation(current);
+          setRecommendationLoadFailed(false);
+          setScreen(
+            current.state === "accepted" ? "active-commitment" : "recommendation",
+          );
+        } catch (error: unknown) {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          setRecommendationLoadFailed(true);
+          setScreen("capture");
+        }
       })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -113,13 +154,32 @@ export function App() {
       return;
     }
 
-    setScreen("saved");
     setRequestState("idle");
+    let savedTasks: Task[];
     try {
-      setTasks(await listTasks());
+      savedTasks = await listTasks();
+      setTasks(savedTasks);
       setTaskListLoadFailed(false);
     } catch {
       setTaskListLoadFailed(true);
+      setScreen("saved");
+      return;
+    }
+
+    if (reviewedTasks.length === 0) {
+      setScreen("saved");
+      return;
+    }
+
+    try {
+      const nextRecommendation = await createRecommendation();
+      setRecommendation(nextRecommendation);
+      setRecommendationFollowsReview(true);
+      setRecommendationLoadFailed(false);
+      setScreen("recommendation");
+    } catch {
+      setRecommendationLoadFailed(true);
+      setScreen("saved");
     }
   }
 
@@ -157,8 +217,59 @@ export function App() {
     setCapture(null);
     setInterpretation(null);
     setReviewedTasks([]);
+    setRecommendationFollowsReview(false);
     setScreen("capture");
     setRequestState("idle");
+  }
+
+  async function respondToRecommendation(eventType: EpisodeEventType) {
+    if (recommendation === null || recommendationRequestState === "submitting") return;
+
+    setRecommendationRequestState("submitting");
+    setRecommendationLoadFailed(false);
+    try {
+      const transition = await recordRecommendationEvent(
+        recommendation.id,
+        eventType,
+      );
+      setLastEpisodeEvent(eventType);
+      setRecommendationFollowsReview(false);
+      if (transition.replacement !== null) {
+        setRecommendation(transition.replacement);
+        setScreen("recommendation");
+      } else if (eventType === "accepted") {
+        setRecommendation(transition.episode);
+        setScreen("active-commitment");
+      } else {
+        setRecommendation(transition.episode);
+        setScreen("outcome");
+      }
+      setRecommendationRequestState("idle");
+    } catch {
+      setRecommendationRequestState("error");
+      setRecommendationLoadFailed(true);
+    }
+  }
+
+  async function chooseAnotherRecommendation() {
+    if (recommendationRequestState === "submitting") return;
+
+    setRecommendationRequestState("submitting");
+    setRecommendationLoadFailed(false);
+    try {
+      const nextRecommendation = await createRecommendation();
+      setRecommendation(nextRecommendation);
+      setLastEpisodeEvent(null);
+      setScreen(
+        nextRecommendation.state === "accepted"
+          ? "active-commitment"
+          : "recommendation",
+      );
+      setRecommendationRequestState("idle");
+    } catch {
+      setRecommendationRequestState("error");
+      setRecommendationLoadFailed(true);
+    }
   }
 
   async function changeTaskStatus(task: Task, status: TaskStatus) {
@@ -174,6 +285,13 @@ export function App() {
               currentTask.id === updatedTask.id ? updatedTask : currentTask,
             ),
       );
+      if (
+        recommendation?.task_id === updatedTask.id &&
+        recommendation.state === "proposed" &&
+        updatedTask.status !== "active"
+      ) {
+        setRecommendation(null);
+      }
     } catch {
       setTaskUpdateFailed(true);
     } finally {
@@ -235,6 +353,11 @@ export function App() {
   const reviewIsValid = reviewedTasks.every(
     (task) => task.title.trim() && task.action_description.trim(),
   );
+  const isOverwhelmedRecommendation =
+    recommendation?.explanation_factors.some(
+      (factor) =>
+        factor.kind === "explicit_response" && factor.value === "overwhelmed",
+    ) ?? false;
 
   return (
     <main className="app-shell">
@@ -259,6 +382,293 @@ export function App() {
             </div>
             <p className="eyebrow">Picking up where you left off</p>
             <h1 id="page-title">Loading your task list…</h1>
+          </div>
+        )}
+
+        {screen === "recommendation" && recommendation !== null && (
+          <div className="recommendation-view" aria-live="polite">
+            <div className="recommendation-intro">
+              <div>
+                <p className="eyebrow">
+                  {recommendationFollowsReview
+                    ? "That’s added. Here’s one place to begin"
+                    : "Ready when you are"}
+                </p>
+                <h1 id="page-title">{recommendation.entry_point}</h1>
+                <p className="recommendation-parent">
+                  <span>For</span>
+                  {recommendation.task_title}
+                </p>
+              </div>
+              <span className="bounded-label">
+                {isOverwhelmedRecommendation
+                  ? "Only a preparation step"
+                  : "One bounded step"}
+              </span>
+            </div>
+
+            <div className="stopping-card">
+              <span>You’re done when</span>
+              <p>{recommendation.stopping_condition}</p>
+            </div>
+
+            <div className="recommendation-reason">
+              <span aria-hidden="true">i</span>
+              <div>
+                <strong>Why this?</strong>
+                <p>{recommendation.reason}</p>
+              </div>
+            </div>
+
+            {recommendationLoadFailed && (
+              <div className="error-message" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>I couldn’t save that response.</strong>
+                  <p>The recommendation has not changed. Try again when you’re ready.</p>
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="primary-button recommendation-start"
+              disabled={recommendationRequestState === "submitting"}
+              onClick={() => void respondToRecommendation("accepted")}
+            >
+              {recommendationRequestState === "submitting" ? (
+                <>
+                  <span className="spinner" aria-hidden="true" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  Start
+                  <span className="button-arrow" aria-hidden="true">
+                    →
+                  </span>
+                </>
+              )}
+            </button>
+
+            {isOverwhelmedRecommendation ? (
+              <button
+                type="button"
+                className="overwhelmed-button"
+                disabled={recommendationRequestState === "submitting"}
+                onClick={() => void respondToRecommendation("deferred")}
+              >
+                Pause here
+              </button>
+            ) : (
+              <>
+                <div
+                  className="recommendation-alternatives"
+                  role="group"
+                  aria-label="Other responses"
+                >
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={recommendationRequestState === "submitting"}
+                    onClick={() => void respondToRecommendation("resized")}
+                  >
+                    Make it smaller
+                  </button>
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={recommendationRequestState === "submitting"}
+                    onClick={() => void respondToRecommendation("swapped")}
+                  >
+                    Different task
+                  </button>
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={recommendationRequestState === "submitting"}
+                    onClick={() => void respondToRecommendation("deferred")}
+                  >
+                    Not right now
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  className="overwhelmed-button"
+                  disabled={recommendationRequestState === "submitting"}
+                  onClick={() => void respondToRecommendation("overwhelmed")}
+                >
+                  I’m overwhelmed
+                </button>
+
+                <div className="recommendation-navigation">
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => setScreen("task-list")}
+                  >
+                    View all tasks
+                  </button>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={startAnotherCapture}
+                  >
+                    Add a brain dump
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {screen === "active-commitment" && recommendation !== null && (
+          <div className="commitment-view" aria-live="polite">
+            <p className="eyebrow">Your commitment</p>
+            <h1 id="page-title">{recommendation.entry_point}</h1>
+            <p className="recommendation-parent">
+              <span>For</span>
+              {recommendation.task_title}
+            </p>
+
+            <div className="stopping-card active-stopping-card">
+              <span>You’re done when</span>
+              <p>{recommendation.stopping_condition}</p>
+            </div>
+
+            <div className="outcome-prompt">
+              <h2>What happened?</h2>
+              <p>
+                Choose only when you’re ready. Until then, Weavance won’t assume an
+                outcome.
+              </p>
+            </div>
+
+            {recommendationLoadFailed && (
+              <div className="error-message" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>I couldn’t save that outcome.</strong>
+                  <p>Your commitment is still here. Nothing was inferred.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="outcome-grid">
+              <button
+                type="button"
+                className="outcome-button outcome-button-primary"
+                disabled={recommendationRequestState === "submitting"}
+                onClick={() => void respondToRecommendation("done_for_now")}
+              >
+                <strong>Done for now</strong>
+                <span>I reached this stopping point</span>
+              </button>
+              <button
+                type="button"
+                className="outcome-button"
+                disabled={recommendationRequestState === "submitting"}
+                onClick={() => void respondToRecommendation("progress_made")}
+              >
+                <strong>I made some progress</strong>
+                <span>I started but stopped before the boundary</span>
+              </button>
+              <button
+                type="button"
+                className="outcome-button"
+                disabled={recommendationRequestState === "submitting"}
+                onClick={() => void respondToRecommendation("did_not_start")}
+              >
+                <strong>I didn’t get started</strong>
+                <span>Record that honestly and choose again</span>
+              </button>
+              <button
+                type="button"
+                className="outcome-button"
+                disabled={recommendationRequestState === "submitting"}
+                onClick={() => void respondToRecommendation("keep_going")}
+              >
+                <strong>I want to keep going</strong>
+                <span>Create another bounded commitment</span>
+              </button>
+            </div>
+
+            <p className="commitment-note">
+              Reporting an outcome does not mark “{recommendation.task_title}” complete.
+            </p>
+          </div>
+        )}
+
+        {screen === "outcome" && recommendation !== null && lastEpisodeEvent !== null && (
+          <div className="outcome-state" aria-live="polite">
+            <div className="success-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="m6 12 4 4 8-8" />
+              </svg>
+            </div>
+            <p className="eyebrow">Response saved</p>
+            <h1 id="page-title">
+              {lastEpisodeEvent === "done_for_now"
+                ? "You met this stopping point."
+                : lastEpisodeEvent === "progress_made"
+                  ? "Your progress is recorded."
+                  : lastEpisodeEvent === "did_not_start"
+                    ? "Thanks for saying what happened."
+                    : lastEpisodeEvent === "deferred"
+                      ? "Okay. This can wait."
+                      : "There isn’t another active task to offer."}
+            </h1>
+            <p className="lede">
+              {lastEpisodeEvent === "done_for_now"
+                ? `“Done for now” applies to this bounded commitment. “${recommendation.task_title}” remains open until you explicitly complete it.`
+                : lastEpisodeEvent === "progress_made"
+                  ? `“${recommendation.task_title}” stays open. We won’t treat partial progress as completion.`
+                  : lastEpisodeEvent === "did_not_start"
+                    ? "Nothing is counted as progress or failure. You can choose a different way in."
+                    : lastEpisodeEvent === "deferred"
+                      ? "This suggestion has been set aside without recording failure."
+                      : "You can add another task, return to the current list, or pause here."}
+            </p>
+
+            {recommendationLoadFailed && (
+              <div className="error-message" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>I couldn’t choose another starting point.</strong>
+                  <p>Your saved response is still intact.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="success-actions">
+              <button
+                type="button"
+                className="primary-button"
+                disabled={recommendationRequestState === "submitting"}
+                onClick={() => void chooseAnotherRecommendation()}
+              >
+                {recommendationRequestState === "submitting"
+                  ? "Choosing…"
+                  : "Choose another starting point"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setScreen("task-list")}
+              >
+                View all tasks
+              </button>
+              <button type="button" className="text-button" onClick={startAnotherCapture}>
+                Add a brain dump
+              </button>
+            </div>
           </div>
         )}
 
@@ -289,6 +699,18 @@ export function App() {
                 >
                   View all tasks
                 </button>
+              </div>
+            )}
+
+            {recommendationLoadFailed && confirmedTasks.length > 0 && (
+              <div className="error-message" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>I couldn’t choose a starting point just yet.</strong>
+                  <p>Your saved tasks are still available, and you can add anything new.</p>
+                </div>
               </div>
             )}
 
@@ -581,14 +1003,47 @@ export function App() {
                 </div>
               </div>
             )}
+            {recommendationLoadFailed && !taskListLoadFailed && (
+              <div className="error-message" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>Your review is saved, but I couldn’t choose a starting point.</strong>
+                  <p>You can try again without changing anything you just added.</p>
+                </div>
+              </div>
+            )}
             <div className="success-actions">
-              <button
-                type="button"
-                className="primary-button"
-                onClick={startAnotherCapture}
-              >
-                Add another brain dump
-              </button>
+              {recommendationLoadFailed && confirmedTasks.length > 0 ? (
+                <>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    disabled={recommendationRequestState === "submitting"}
+                    onClick={() => void chooseAnotherRecommendation()}
+                  >
+                    {recommendationRequestState === "submitting"
+                      ? "Choosing…"
+                      : "Choose a starting point"}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={startAnotherCapture}
+                  >
+                    Add another brain dump
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={startAnotherCapture}
+                >
+                  Add another brain dump
+                </button>
+              )}
               {confirmedTasks.length > 0 && (
                 <button
                   type="button"
@@ -776,14 +1231,34 @@ export function App() {
 
             <div className="task-list-footer">
               <p>
-                Next, Weavance can use this list to choose one manageable place to start.
+                The full list stays available without becoming the default place to work.
               </p>
               <button
                 type="button"
                 className="primary-button"
+                disabled={recommendationRequestState === "submitting"}
+                onClick={() => {
+                  if (recommendation?.state === "accepted") {
+                    setScreen("active-commitment");
+                  } else if (recommendation?.state === "proposed") {
+                    setScreen("recommendation");
+                  } else {
+                    void chooseAnotherRecommendation();
+                  }
+                }}
+              >
+                {recommendation?.state === "accepted"
+                  ? "Back to commitment"
+                  : recommendation?.state === "proposed"
+                    ? "Back to starting point"
+                    : "Choose a starting point"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
                 onClick={startAnotherCapture}
               >
-                Back to brain dump
+                Add a brain dump
               </button>
             </div>
           </div>

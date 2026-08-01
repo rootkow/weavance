@@ -1,5 +1,11 @@
 # AGENTS.md
 
+## Repository Workflow
+
+- Start each unit of work from an up-to-date `main` branch and create a dedicated branch using an appropriate prefix, such as `feature/`, `fix/`, or `docs/`.
+- Commit and push each completed unit of work, then open a separate pull request for it.
+- Verify that all CI checks pass before considering the unit of work complete.
+
 ## Project Backlog
 
 - Add agreed backlog items to the `rootkow` **Weavance** GitHub Project using `gh`.
