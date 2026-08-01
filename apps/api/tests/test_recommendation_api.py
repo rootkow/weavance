@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 
 from httpx import ASGITransport, AsyncClient
@@ -145,3 +146,54 @@ async def test_bounded_recommendation_lifecycle(
     assert resized_accept_response.json()["episode"]["state"] == "accepted"
     assert progress_response.json()["event"]["event_type"] == "progress_made"
     assert progress_response.json()["episode"]["state"] == "closed"
+
+
+async def test_concurrent_duplicate_transitions_conflict(
+    monkeypatch,
+    test_database_url: str,
+) -> None:
+    engine = create_async_engine(test_database_url)
+    test_session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async def override_get_session() -> AsyncIterator[AsyncSession]:
+        async with test_session_factory() as session:
+            yield session
+
+    monkeypatch.setitem(app.dependency_overrides, get_session, override_get_session)
+
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as client:
+            await _confirm_tasks(
+                client,
+                raw_text="Prepare the quarterly planning notes",
+            )
+            recommendation_response = await client.post(
+                "/recommendations",
+                json={"context": {}},
+            )
+            recommendation = recommendation_response.json()
+            event_url = f"/recommendations/{recommendation['id']}/events"
+
+            accepted_responses = await asyncio.gather(
+                client.post(event_url, json={"event_type": "accepted"}),
+                client.post(event_url, json={"event_type": "accepted"}),
+            )
+            outcome_responses = await asyncio.gather(
+                client.post(event_url, json={"event_type": "done_for_now"}),
+                client.post(event_url, json={"event_type": "progress_made"}),
+            )
+    finally:
+        await engine.dispose()
+
+    assert recommendation_response.status_code == 201
+    assert sorted(response.status_code for response in accepted_responses) == [
+        201,
+        409,
+    ]
+    assert sorted(response.status_code for response in outcome_responses) == [
+        201,
+        409,
+    ]

@@ -110,7 +110,7 @@ async def record_episode_event(
     request: EpisodeEventCreate,
 ) -> RecommendationTransitionResponse:
     try:
-        episode = await _load_episode(session, episode_id)
+        episode = await _load_episode(session, episode_id, lock_for_update=True)
     except RecommendationNotFoundError:
         raise
 
@@ -230,8 +230,10 @@ async def _get_current_episode(
 async def _load_episode(
     session: AsyncSession,
     episode_id: UUID,
+    *,
+    lock_for_update: bool = False,
 ) -> RecommendationEpisode:
-    episode = await session.scalar(
+    statement = (
         select(RecommendationEpisode)
         .options(
             selectinload(RecommendationEpisode.task),
@@ -240,6 +242,10 @@ async def _load_episode(
         )
         .where(RecommendationEpisode.id == episode_id)
     )
+    if lock_for_update:
+        statement = statement.with_for_update()
+
+    episode = await session.scalar(statement)
     if episode is None:
         raise RecommendationNotFoundError
     return episode
