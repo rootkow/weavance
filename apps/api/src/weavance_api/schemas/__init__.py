@@ -1,6 +1,4 @@
 from weavance_api.schemas.capture import CaptureCreate, CaptureResponse
-
-__all__ = ["CaptureCreate", "CaptureResponse"]
 from weavance_api.schemas.recommendation import (
     ContextSnapshot,
     EpisodeEventCreate,
@@ -11,6 +9,8 @@ from weavance_api.schemas.recommendation import (
 )
 
 __all__ = [
+    "CaptureCreate",
+    "CaptureResponse",
     "ContextSnapshot",
     "EpisodeEventCreate",
     "EpisodeEventResponse",

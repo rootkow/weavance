@@ -10,6 +10,17 @@ export type EpisodeEventType =
   | "did_not_start"
   | "keep_going";
 
+export interface RecommendationContextSnapshot {
+  available_minutes: number | null;
+  easier_requested: boolean;
+  constraints: string[];
+}
+
+export interface RecommendationExplanationFactor {
+  kind: string;
+  value: string;
+}
+
 export interface Recommendation {
   id: string;
   task_id: string;
@@ -19,12 +30,8 @@ export interface Recommendation {
   action_description: string;
   entry_point: string;
   stopping_condition: string;
-  context_snapshot: {
-    available_minutes?: number | null;
-    easier_requested?: boolean;
-    constraints?: string[];
-  };
-  explanation_factors: Array<Record<string, unknown>>;
+  context_snapshot: RecommendationContextSnapshot;
+  explanation_factors: RecommendationExplanationFactor[];
   reason: string;
   strategy_name: string;
   strategy_version: string;
@@ -47,9 +54,41 @@ export interface RecommendationTransition {
 const RECOMMENDATION_REQUEST_TIMEOUT_MS = 15_000;
 const apiBaseUrl = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isContextSnapshot(value: unknown): value is RecommendationContextSnapshot {
+  if (!isRecord(value)) return false;
+  const availableMinutes = value.available_minutes;
+  return (
+    (availableMinutes === null ||
+      (typeof availableMinutes === "number" &&
+        Number.isInteger(availableMinutes) &&
+        availableMinutes > 0)) &&
+    typeof value.easier_requested === "boolean" &&
+    Array.isArray(value.constraints) &&
+    value.constraints.every(
+      (constraint) => typeof constraint === "string" && constraint.trim().length > 0,
+    )
+  );
+}
+
+function isExplanationFactor(
+  value: unknown,
+): value is RecommendationExplanationFactor {
+  return (
+    isRecord(value) &&
+    typeof value.kind === "string" &&
+    value.kind.trim().length > 0 &&
+    typeof value.value === "string" &&
+    value.value.trim().length > 0
+  );
+}
+
 function isRecommendation(value: unknown): value is Recommendation {
-  if (typeof value !== "object" || value === null) return false;
-  const recommendation = value as Record<string, unknown>;
+  if (!isRecord(value)) return false;
+  const recommendation = value;
   return (
     typeof recommendation.id === "string" &&
     typeof recommendation.task_id === "string" &&
@@ -67,7 +106,9 @@ function isRecommendation(value: unknown): value is Recommendation {
       recommendation.state === "accepted" ||
       recommendation.state === "closed") &&
     typeof recommendation.created_at === "string" &&
-    Array.isArray(recommendation.explanation_factors)
+    isContextSnapshot(recommendation.context_snapshot) &&
+    Array.isArray(recommendation.explanation_factors) &&
+    recommendation.explanation_factors.every(isExplanationFactor)
   );
 }
 

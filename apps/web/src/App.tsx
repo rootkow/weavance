@@ -466,6 +466,7 @@ export function App() {
               <>
                 <div
                   className="recommendation-alternatives"
+                  role="group"
                   aria-label="Other responses"
                 >
                   <button
