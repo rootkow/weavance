@@ -123,4 +123,53 @@ class EpisodeEvent(Base):
     episode: Mapped[RecommendationEpisode] = relationship(back_populates="events")
 
 
+class ReentryCheckpoint(Base):
+    __tablename__ = "reentry_checkpoints"
+    __table_args__ = (
+        CheckConstraint(
+            "length(btrim(entry_point)) > 0",
+            name="ck_reentry_checkpoints_entry_point_not_blank",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PostgreSQLUUID(as_uuid=True), primary_key=True)
+    task_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("tasks.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    action_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("actions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    source_episode_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("recommendation_episodes.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,
+    )
+    reentry_episode_id: Mapped[UUID | None] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("recommendation_episodes.id", ondelete="RESTRICT"),
+        nullable=True,
+        unique=True,
+    )
+    entry_point: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    task: Mapped[Task] = relationship()
+    action: Mapped[Action] = relationship()
+    source_episode: Mapped[RecommendationEpisode] = relationship(
+        foreign_keys=[source_episode_id],
+    )
+    reentry_episode: Mapped[RecommendationEpisode | None] = relationship(
+        foreign_keys=[reentry_episode_id],
+    )
+
+
 from weavance_api.models.task import Action, Task  # noqa: E402

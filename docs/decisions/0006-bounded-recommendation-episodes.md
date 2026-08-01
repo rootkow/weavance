@@ -71,9 +71,14 @@ disabled by default and available only through explicit opt-in on a future Setti
 protects users who experience timers as rushing or pressure while leaving room for users who find
 them helpful for focus.
 
-After `progress_made` or another interruption, the user may save a short `ReentryCheckpoint`
-describing where they stopped. A later recommendation can use that checkpoint to offer a smaller
-way back into the same task rather than resurfacing the task unchanged.
+After `progress_made`, the user may save a short `ReentryCheckpoint` describing where to begin
+next. The outcome and checkpoint are persisted atomically, while skipping records only the
+outcome. The application does not generate a checkpoint from silence or another response.
+
+The newest unconsumed checkpoint whose task and action remain active takes precedence when no
+episode is current. Offering it creates a new bounded child episode and records that episode as
+the checkpoint's consumer. This preserves the exact source and prevents a deferred or swapped
+re-entry offer from repeatedly resurfacing. Completed and archived work is not eligible.
 
 The **I'm overwhelmed** response is explicit user intent, not an inferred condition. Its initial
 policy should reduce the size and number of decisions presented, avoid expanding the full task

@@ -28,7 +28,7 @@ Status: **Complete**
 | 6. Create one bounded recommendation episode | Complete | A deterministic strategy selects an eligible active action and records its entry point, textual stopping condition, explanation factors, reason, and strategy version |
 | 7. Accept a pre-start response | Complete | Start, resize, defer, swap, and overwhelmed are persisted as explicit append-only events; resize, swap, and overwhelm can create replacement episodes |
 | 8. Record an honest outcome | Complete | The focused commitment view records done for now, progress, did not start, and keep going without completing the persistent task |
-| 9. Offer a re-entry action | Planned | Partial progress can preserve a checkpoint for a later bounded recommendation |
+| 9. Offer a re-entry action | Complete | Partial progress can optionally save a user-authored checkpoint; the newest eligible checkpoint becomes a traceable child episode before ordinary selection |
 
 The five initial responses are:
 
@@ -51,6 +51,11 @@ explicitly completes it. The focused UI currently adds the supporting descriptio
 stopping point** and explains the boundary again after selection. The label remains under review
 after dogfooding because it may also be read as postponement. If the user does not report an
 outcome, the outcome remains unknown.
+
+After **I made some progress**, the user may save one concrete place to begin next time or skip
+without explanation. A saved checkpoint is offered before ordinary task selection while its task
+and action remain active. Offering it creates a new immutable bounded episode and consumes the
+checkpoint; the original task still remains open.
 
 The initial experience has no countdown or timer UI. A possible future focus timer is a separate,
 optional feature: it must remain disabled by default and require explicit opt-in through a future

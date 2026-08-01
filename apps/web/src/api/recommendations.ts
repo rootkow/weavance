@@ -39,6 +39,16 @@ export interface Recommendation {
   created_at: string;
 }
 
+export interface ReentryCheckpoint {
+  id: string;
+  task_id: string;
+  action_id: string;
+  source_episode_id: string;
+  reentry_episode_id: string | null;
+  entry_point: string;
+  created_at: string;
+}
+
 export interface RecommendationTransition {
   event: {
     id: string;
@@ -49,9 +59,11 @@ export interface RecommendationTransition {
   };
   episode: Recommendation;
   replacement: Recommendation | null;
+  checkpoint: ReentryCheckpoint | null;
 }
 
 const RECOMMENDATION_REQUEST_TIMEOUT_MS = 15_000;
+export const MAX_REENTRY_POINT_CHARACTERS = 500;
 const apiBaseUrl = (import.meta.env.VITE_API_URL ?? "").replace(/\/+$/, "");
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -83,6 +95,35 @@ function isExplanationFactor(
     value.kind.trim().length > 0 &&
     typeof value.value === "string" &&
     value.value.trim().length > 0
+  );
+}
+
+function isEpisodeEventType(value: unknown): value is EpisodeEventType {
+  return (
+    value === "accepted" ||
+    value === "resized" ||
+    value === "deferred" ||
+    value === "swapped" ||
+    value === "overwhelmed" ||
+    value === "done_for_now" ||
+    value === "progress_made" ||
+    value === "did_not_start" ||
+    value === "keep_going"
+  );
+}
+
+function isReentryCheckpoint(value: unknown): value is ReentryCheckpoint {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.task_id === "string" &&
+    typeof value.action_id === "string" &&
+    typeof value.source_episode_id === "string" &&
+    (value.reentry_episode_id === null ||
+      typeof value.reentry_episode_id === "string") &&
+    typeof value.entry_point === "string" &&
+    value.entry_point.trim().length > 0 &&
+    typeof value.created_at === "string"
   );
 }
 
@@ -158,6 +199,7 @@ export async function createRecommendation(
 export async function recordRecommendationEvent(
   recommendationId: string,
   eventType: EpisodeEventType,
+  details: { reentry_point?: string } = {},
   signal: AbortSignal = AbortSignal.timeout(RECOMMENDATION_REQUEST_TIMEOUT_MS),
 ): Promise<RecommendationTransition> {
   const response = await fetch(
@@ -167,7 +209,7 @@ export async function recordRecommendationEvent(
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ event_type: eventType }),
+      body: JSON.stringify({ event_type: eventType, ...details }),
       signal,
     },
   );
@@ -179,15 +221,20 @@ export async function recordRecommendationEvent(
     throw new Error("Recommendation transition did not match the expected shape");
   }
   const transition = responseBody as Record<string, unknown>;
-  const event = transition.event as Record<string, unknown> | null;
+  const event = transition.event;
   if (
-    event === null ||
-    typeof event !== "object" ||
+    !isRecord(event) ||
     typeof event.id !== "string" ||
     typeof event.episode_id !== "string" ||
-    typeof event.event_type !== "string" ||
+    !isEpisodeEventType(event.event_type) ||
+    !isRecord(event.payload) ||
+    typeof event.created_at !== "string" ||
     !isRecommendation(transition.episode) ||
-    !(transition.replacement === null || isRecommendation(transition.replacement))
+    !(transition.replacement === null || isRecommendation(transition.replacement)) ||
+    !(
+      transition.checkpoint === null ||
+      isReentryCheckpoint(transition.checkpoint)
+    )
   ) {
     throw new Error("Recommendation transition did not match the expected shape");
   }

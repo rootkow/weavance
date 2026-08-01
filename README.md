@@ -90,8 +90,8 @@ again.
 
 Weavance is under active development. The working prototype covers capture, interpretation,
 structured review, canonical task/action persistence, explicit task lifecycle updates, persisted
-bounded recommendations, pre-start responses, and reported outcomes. It does not yet collect
-context through the UI or provide re-entry checkpoints after partial progress.
+bounded recommendations, pre-start responses, reported outcomes, and optional re-entry
+checkpoints after partial progress. It does not yet collect recommendation context through the UI.
 
 See the [MVP scope](docs/mvp.md) for current progress and acceptance criteria.
 

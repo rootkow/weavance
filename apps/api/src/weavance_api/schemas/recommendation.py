@@ -2,9 +2,20 @@ from datetime import datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 NonBlankString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+ReentryPoint = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=500),
+]
 EpisodeState = Literal["proposed", "accepted", "closed"]
 EpisodeEventTypeValue = Literal[
     "accepted",
@@ -64,6 +75,13 @@ class EpisodeEventCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     event_type: EpisodeEventTypeValue
+    reentry_point: ReentryPoint | None = None
+
+    @model_validator(mode="after")
+    def reentry_point_requires_progress(self) -> "EpisodeEventCreate":
+        if self.reentry_point is not None and self.event_type != "progress_made":
+            raise ValueError("reentry_point is only valid with progress_made")
+        return self
 
 
 class EpisodeEventResponse(BaseModel):
@@ -83,9 +101,29 @@ class EpisodeEventResponse(BaseModel):
         return value
 
 
+class ReentryCheckpointResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, frozen=True)
+
+    id: UUID
+    task_id: UUID
+    action_id: UUID
+    source_episode_id: UUID
+    reentry_episode_id: UUID | None
+    entry_point: str
+    created_at: datetime
+
+    @field_validator("created_at")
+    @classmethod
+    def timestamp_must_include_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("created_at must include a timezone")
+        return value
+
+
 class RecommendationTransitionResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     event: EpisodeEventResponse
     episode: RecommendationEpisodeResponse
     replacement: RecommendationEpisodeResponse | None = None
+    checkpoint: ReentryCheckpointResponse | None = None
