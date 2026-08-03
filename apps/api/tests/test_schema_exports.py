@@ -6,3 +6,4 @@ def test_schema_package_preserves_capture_and_recommendation_exports() -> None:
     assert "CaptureResponse" in schemas.__all__
     assert "RecommendationCreate" in schemas.__all__
     assert "RecommendationEpisodeResponse" in schemas.__all__
+    assert "ReentryCheckpointResponse" in schemas.__all__

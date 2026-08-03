@@ -6,6 +6,7 @@ from weavance_api.schemas.recommendation import (
     RecommendationCreate,
     RecommendationEpisodeResponse,
     RecommendationTransitionResponse,
+    ReentryCheckpointResponse,
 )
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "RecommendationCreate",
     "RecommendationEpisodeResponse",
     "RecommendationTransitionResponse",
+    "ReentryCheckpointResponse",
 ]

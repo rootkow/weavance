@@ -2,7 +2,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
-import type { Recommendation } from "./api/recommendations";
+import type {
+  Recommendation,
+  ReentryCheckpoint,
+} from "./api/recommendations";
 
 const capture = {
   id: "a127eea6-fc28-447c-a990-04ee6487de09",
@@ -159,6 +162,7 @@ function recommendationTransition(
     | "did_not_start"
     | "keep_going",
   replacement: Recommendation | null = null,
+  checkpoint: ReentryCheckpoint | null = null,
 ) {
   return {
     event: {
@@ -173,6 +177,22 @@ function recommendationTransition(
       state: eventType === "accepted" ? "accepted" : "closed",
     },
     replacement,
+    checkpoint,
+  };
+}
+
+function checkpointForRecommendation(
+  recommendation: Recommendation,
+  entryPoint: string,
+): ReentryCheckpoint {
+  return {
+    id: `checkpoint-${recommendation.id}`,
+    task_id: recommendation.task_id,
+    action_id: recommendation.action_id,
+    source_episode_id: recommendation.id,
+    reentry_episode_id: null,
+    entry_point: entryPoint,
+    created_at: "2026-07-30T14:02:00Z",
   };
 }
 
@@ -532,6 +552,151 @@ describe("App", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({ event_type: "done_for_now" }),
+      }),
+    );
+  });
+
+  it("saves a progress checkpoint and offers it as the next way back", async () => {
+    const confirmedInterpretation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    const [activeTask] = tasksFromInterpretations(confirmedInterpretation);
+    const proposedRecommendation = recommendationForTask(activeTask);
+    const acceptedRecommendation = {
+      ...proposedRecommendation,
+      state: "accepted" as const,
+    };
+    const entryPoint = "Open the draft and revise the next paragraph";
+    const checkpoint = checkpointForRecommendation(
+      acceptedRecommendation,
+      entryPoint,
+    );
+    const reentryRecommendation: Recommendation = {
+      ...recommendationForTask(activeTask),
+      id: `reentry-${activeTask.id}`,
+      parent_episode_id: proposedRecommendation.id,
+      entry_point: entryPoint,
+      stopping_condition:
+        "You have completed this saved next step. Then pause and choose again.",
+      explanation_factors: [
+        { kind: "reentry_checkpoint", value: checkpoint.id },
+      ],
+      reason:
+        "You saved this as the place you wanted to pick back up after making progress.",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse([activeTask], 200))
+      .mockResolvedValueOnce(jsonResponse(proposedRecommendation, 200))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          recommendationTransition(proposedRecommendation, "accepted"),
+        ),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          recommendationTransition(
+            acceptedRecommendation,
+            "progress_made",
+            null,
+            checkpoint,
+          ),
+        ),
+      )
+      .mockResolvedValueOnce(jsonResponse(reentryRecommendation));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await screen.findByText("One bounded step");
+    fireEvent.click(screen.getByRole("button", { name: "Start" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /I made some progress/ }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Where should you pick this back up?",
+      }),
+    ).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    fireEvent.change(screen.getByLabelText("Next place to begin"), {
+      target: { value: entryPoint },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save my place" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Your way back is saved." }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Next time, we’ll offer/)).toHaveTextContent(entryPoint);
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      `/recommendations/${proposedRecommendation.id}/events`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          event_type: "progress_made",
+          reentry_point: entryPoint,
+        }),
+      }),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Choose another starting point" }),
+    );
+    expect(await screen.findByText("A saved way back")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: entryPoint })).toBeInTheDocument();
+    expect(screen.getByText("Pick up where you left off")).toBeInTheDocument();
+  });
+
+  it("records partial progress without a checkpoint when the user skips", async () => {
+    const confirmedInterpretation = {
+      ...interpretation,
+      id: "2ed72150-36e9-4682-ad27-db1031b77de9",
+      version: 2,
+      status: "confirmed",
+    };
+    const [activeTask] = tasksFromInterpretations(confirmedInterpretation);
+    const proposedRecommendation = recommendationForTask(activeTask);
+    const acceptedRecommendation = {
+      ...proposedRecommendation,
+      state: "accepted" as const,
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse([activeTask], 200))
+      .mockResolvedValueOnce(jsonResponse(proposedRecommendation, 200))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          recommendationTransition(proposedRecommendation, "accepted"),
+        ),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          recommendationTransition(acceptedRecommendation, "progress_made"),
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    render(<App />);
+
+    await screen.findByText("One bounded step");
+    fireEvent.click(screen.getByRole("button", { name: "Start" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /I made some progress/ }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Your progress is recorded." }),
+    ).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      `/recommendations/${proposedRecommendation.id}/events`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ event_type: "progress_made" }),
       }),
     );
   });

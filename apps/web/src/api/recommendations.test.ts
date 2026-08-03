@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getCurrentRecommendation } from "./recommendations";
+import {
+  getCurrentRecommendation,
+  recordRecommendationEvent,
+} from "./recommendations";
 
 const validRecommendation = {
   id: "7d84b307-1069-4a6c-8cee-33d32ba6ed65",
@@ -24,6 +27,29 @@ const validRecommendation = {
   strategy_version: "1",
   state: "proposed",
   created_at: "2026-08-01T10:00:00Z",
+};
+
+const validCheckpoint = {
+  id: "9ee2fe65-77fe-42ae-bdbd-15c129a44637",
+  task_id: validRecommendation.task_id,
+  action_id: validRecommendation.action_id,
+  source_episode_id: validRecommendation.id,
+  reentry_episode_id: null,
+  entry_point: "Open the draft and revise the next paragraph",
+  created_at: "2026-08-01T10:05:00Z",
+};
+
+const validTransition = {
+  event: {
+    id: "1874e197-94f8-4340-8893-4efe8ad7749b",
+    episode_id: validRecommendation.id,
+    event_type: "progress_made",
+    payload: { reentry_checkpoint_id: validCheckpoint.id },
+    created_at: "2026-08-01T10:05:00Z",
+  },
+  episode: { ...validRecommendation, state: "closed" },
+  replacement: null,
+  checkpoint: validCheckpoint,
 };
 
 function jsonResponse(body: unknown): Response {
@@ -73,6 +99,44 @@ describe("recommendation response validation", () => {
 
     await expect(getCurrentRecommendation()).rejects.toThrow(
       "Recommendation response did not match the expected shape",
+    );
+  });
+
+  it("accepts a complete checkpoint transition", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(validTransition));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      recordRecommendationEvent(validRecommendation.id, "progress_made", {
+        reentry_point: validCheckpoint.entry_point,
+      }),
+    ).resolves.toEqual(validTransition);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/recommendations/${validRecommendation.id}/events`,
+      expect.objectContaining({
+        body: JSON.stringify({
+          event_type: "progress_made",
+          reentry_point: validCheckpoint.entry_point,
+        }),
+      }),
+    );
+  });
+
+  it("rejects malformed checkpoint transition data", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          ...validTransition,
+          checkpoint: { ...validCheckpoint, entry_point: "" },
+        }),
+      ),
+    );
+
+    await expect(
+      recordRecommendationEvent(validRecommendation.id, "progress_made"),
+    ).rejects.toThrow(
+      "Recommendation transition did not match the expected shape",
     );
   });
 });

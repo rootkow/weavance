@@ -11,9 +11,11 @@ import {
 import {
   createRecommendation,
   getCurrentRecommendation,
+  MAX_REENTRY_POINT_CHARACTERS,
   recordRecommendationEvent,
   type EpisodeEventType,
   type Recommendation,
+  type ReentryCheckpoint,
 } from "./api/recommendations";
 import {
   listTasks,
@@ -27,6 +29,7 @@ type Screen =
   | "loading"
   | "recommendation"
   | "active-commitment"
+  | "checkpoint"
   | "outcome"
   | "capture"
   | "interpreting"
@@ -63,6 +66,9 @@ export function App() {
   const [recommendationLoadFailed, setRecommendationLoadFailed] = useState(false);
   const [recommendationFollowsReview, setRecommendationFollowsReview] =
     useState(false);
+  const [reentryPoint, setReentryPoint] = useState("");
+  const [savedCheckpoint, setSavedCheckpoint] =
+    useState<ReentryCheckpoint | null>(null);
   const [screen, setScreen] = useState<Screen>("loading");
   const [requestState, setRequestState] = useState<RequestState>("idle");
   const [taskListLoadFailed, setTaskListLoadFailed] = useState(false);
@@ -218,11 +224,16 @@ export function App() {
     setInterpretation(null);
     setReviewedTasks([]);
     setRecommendationFollowsReview(false);
+    setReentryPoint("");
+    setSavedCheckpoint(null);
     setScreen("capture");
     setRequestState("idle");
   }
 
-  async function respondToRecommendation(eventType: EpisodeEventType) {
+  async function respondToRecommendation(
+    eventType: EpisodeEventType,
+    checkpointEntryPoint?: string,
+  ) {
     if (recommendation === null || recommendationRequestState === "submitting") return;
 
     setRecommendationRequestState("submitting");
@@ -231,8 +242,12 @@ export function App() {
       const transition = await recordRecommendationEvent(
         recommendation.id,
         eventType,
+        checkpointEntryPoint === undefined
+          ? {}
+          : { reentry_point: checkpointEntryPoint.trim() },
       );
       setLastEpisodeEvent(eventType);
+      setSavedCheckpoint(transition.checkpoint);
       setRecommendationFollowsReview(false);
       if (transition.replacement !== null) {
         setRecommendation(transition.replacement);
@@ -251,6 +266,19 @@ export function App() {
     }
   }
 
+  function beginProgressReport() {
+    setReentryPoint("");
+    setSavedCheckpoint(null);
+    setRecommendationLoadFailed(false);
+    setScreen("checkpoint");
+  }
+
+  function saveProgressCheckpoint(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!reentryPoint.trim()) return;
+    void respondToRecommendation("progress_made", reentryPoint);
+  }
+
   async function chooseAnotherRecommendation() {
     if (recommendationRequestState === "submitting") return;
 
@@ -260,6 +288,7 @@ export function App() {
       const nextRecommendation = await createRecommendation();
       setRecommendation(nextRecommendation);
       setLastEpisodeEvent(null);
+      setSavedCheckpoint(null);
       setScreen(
         nextRecommendation.state === "accepted"
           ? "active-commitment"
@@ -358,6 +387,10 @@ export function App() {
       (factor) =>
         factor.kind === "explicit_response" && factor.value === "overwhelmed",
     ) ?? false;
+  const isReentryRecommendation =
+    recommendation?.explanation_factors.some(
+      (factor) => factor.kind === "reentry_checkpoint",
+    ) ?? false;
 
   return (
     <main className="app-shell">
@@ -390,9 +423,11 @@ export function App() {
             <div className="recommendation-intro">
               <div>
                 <p className="eyebrow">
-                  {recommendationFollowsReview
-                    ? "That’s added. Here’s one place to begin"
-                    : "Ready when you are"}
+                  {isReentryRecommendation
+                    ? "Pick up where you left off"
+                    : recommendationFollowsReview
+                      ? "That’s added. Here’s one place to begin"
+                      : "Ready when you are"}
                 </p>
                 <h1 id="page-title">{recommendation.entry_point}</h1>
                 <p className="recommendation-parent">
@@ -403,7 +438,9 @@ export function App() {
               <span className="bounded-label">
                 {isOverwhelmedRecommendation
                   ? "Only a preparation step"
-                  : "One bounded step"}
+                  : isReentryRecommendation
+                    ? "A saved way back"
+                    : "One bounded step"}
               </span>
             </div>
 
@@ -573,7 +610,7 @@ export function App() {
                 type="button"
                 className="outcome-button"
                 disabled={recommendationRequestState === "submitting"}
-                onClick={() => void respondToRecommendation("progress_made")}
+                onClick={beginProgressReport}
               >
                 <strong>I made some progress</strong>
                 <span>I started but stopped before the boundary</span>
@@ -604,6 +641,89 @@ export function App() {
           </div>
         )}
 
+        {screen === "checkpoint" && recommendation !== null && (
+          <div className="checkpoint-view" aria-live="polite">
+            <p className="eyebrow">Make returning easier</p>
+            <h1 id="page-title">Where should you pick this back up?</h1>
+            <p className="lede">
+              Save one visible next move while it’s still fresh. This is optional—we
+              won’t guess if you skip it.
+            </p>
+
+            {recommendationLoadFailed && (
+              <div className="error-message" role="alert">
+                <span className="error-icon" aria-hidden="true">
+                  !
+                </span>
+                <div>
+                  <strong>I couldn’t save your progress.</strong>
+                  <p>Your note is still here. Nothing has been recorded yet.</p>
+                </div>
+              </div>
+            )}
+
+            <form className="checkpoint-form" onSubmit={saveProgressCheckpoint}>
+              <div className="field-heading">
+                <label htmlFor="reentry-point">Next place to begin</label>
+                <span>Optional checkpoint</span>
+              </div>
+              <textarea
+                id="reentry-point"
+                value={reentryPoint}
+                onChange={(event) => {
+                  setReentryPoint(event.target.value);
+                  if (recommendationRequestState === "error") {
+                    setRecommendationRequestState("idle");
+                    setRecommendationLoadFailed(false);
+                  }
+                }}
+                placeholder="Open the draft and revise the next paragraph"
+                rows={4}
+                maxLength={MAX_REENTRY_POINT_CHARACTERS}
+                disabled={recommendationRequestState === "submitting"}
+                autoFocus
+              />
+              <p className="checkpoint-guidance">
+                Keep it concrete and small. Up to {MAX_REENTRY_POINT_CHARACTERS} characters.
+              </p>
+              <div className="checkpoint-actions">
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={
+                    !reentryPoint.trim() ||
+                    recommendationRequestState === "submitting"
+                  }
+                >
+                  {recommendationRequestState === "submitting"
+                    ? "Saving…"
+                    : "Save my place"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={recommendationRequestState === "submitting"}
+                  onClick={() => void respondToRecommendation("progress_made")}
+                >
+                  Skip for now
+                </button>
+              </div>
+              <button
+                type="button"
+                className="text-button checkpoint-back"
+                disabled={recommendationRequestState === "submitting"}
+                onClick={() => {
+                  setRecommendationLoadFailed(false);
+                  setRecommendationRequestState("idle");
+                  setScreen("active-commitment");
+                }}
+              >
+                Back to outcome choices
+              </button>
+            </form>
+          </div>
+        )}
+
         {screen === "outcome" && recommendation !== null && lastEpisodeEvent !== null && (
           <div className="outcome-state" aria-live="polite">
             <div className="success-mark" aria-hidden="true">
@@ -616,7 +736,9 @@ export function App() {
               {lastEpisodeEvent === "done_for_now"
                 ? "You met this stopping point."
                 : lastEpisodeEvent === "progress_made"
-                  ? "Your progress is recorded."
+                  ? savedCheckpoint === null
+                    ? "Your progress is recorded."
+                    : "Your way back is saved."
                   : lastEpisodeEvent === "did_not_start"
                     ? "Thanks for saying what happened."
                     : lastEpisodeEvent === "deferred"
@@ -627,7 +749,9 @@ export function App() {
               {lastEpisodeEvent === "done_for_now"
                 ? `“Done for now” applies to this bounded commitment. “${recommendation.task_title}” remains open until you explicitly complete it.`
                 : lastEpisodeEvent === "progress_made"
-                  ? `“${recommendation.task_title}” stays open. We won’t treat partial progress as completion.`
+                  ? savedCheckpoint === null
+                    ? `“${recommendation.task_title}” stays open. We won’t treat partial progress as completion.`
+                    : `“${recommendation.task_title}” stays open. Next time, we’ll offer “${savedCheckpoint.entry_point}” as a way back in.`
                   : lastEpisodeEvent === "did_not_start"
                     ? "Nothing is counted as progress or failure. You can choose a different way in."
                     : lastEpisodeEvent === "deferred"

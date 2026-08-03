@@ -5,6 +5,7 @@ from weavance_api.models.recommendation import (
     EpisodeEvent,
     EpisodeEventType,
     RecommendationEpisode,
+    ReentryCheckpoint,
 )
 from weavance_api.models.task import Action, ActionStatus, Task, TaskStatus
 
@@ -18,6 +19,7 @@ __all__ = [
     "Interpretation",
     "InterpretationStatus",
     "RecommendationEpisode",
+    "ReentryCheckpoint",
     "Task",
     "TaskStatus",
 ]

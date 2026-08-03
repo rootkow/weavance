@@ -14,7 +14,7 @@
 | Secondary task-management UI | Implemented for task and first-action editing, completion, reopening, and archival |
 | Bounded recommendation episodes | Implemented with a transparent deterministic strategy and persisted context/explanation snapshots |
 | Pre-start responses and reported outcomes | Implemented as append-only episode events |
-| Re-entry checkpoints | Planned |
+| Re-entry checkpoints | Implemented for optional checkpoint capture, prioritized selection, and traceable consumption |
 | Raw capture and complete proposal-history UI | Not designed yet |
 
 The current user-facing path saves a capture, creates a versioned interpretation, and lets the user
@@ -27,7 +27,9 @@ supports editing the task and its first action along with completion, reopening,
 When active work exists, startup restores an accepted commitment or presents one recommendation
 instead of defaulting to capture. Confirmation also proceeds directly to a recommendation. Start,
 resize, defer, swap, overwhelm, and outcome responses are stored as append-only evidence. UI
-collection of richer context, a full history surface, and re-entry checkpoints remain planned.
+collection of richer context and a full history surface remain planned. Partial progress can save
+one user-authored checkpoint, and the newest eligible checkpoint becomes the next bounded episode
+before ordinary selection.
 
 ## Target system boundaries
 
@@ -44,7 +46,8 @@ flowchart TD
     RECOMMEND --> VALIDATE["Policy validation"]
     VALIDATE --> EPISODE["Bounded episode"]
     EPISODE --> EVENTS["Responses and outcomes"]
-    EVENTS -. "Partial progress" .-> REENTRY["Re-entry checkpoint"]
+    EVENTS -->|"Optional partial-progress note"| REENTRY["Re-entry checkpoint"]
+    REENTRY -->|"Newest eligible checkpoint"| POLICY
 ```
 
 The interpretation layer converts free-form language and available context into structured
@@ -90,7 +93,7 @@ unknown unless asking would materially change the recommendation.
 | `ContextSnapshot` | Records optional, explicit context such as available time, a request for something easier, and known constraints |
 | `RecommendationEpisode` | Records one bounded commitment, its stopping condition, explanation factors, context, and strategy version |
 | `EpisodeEvent` | Appends acceptance, resize, defer, swap, overwhelm, and reported-outcome evidence |
-| `ReentryCheckpoint` | Preserves where the user stopped and a useful way back into unfinished work |
+| `ReentryCheckpoint` | Preserves a user-authored next entry point, its source episode, and the child episode that consumes it |
 
 `Task` and `Action` remain separate. “Update my resume” can be a long-lived task; “revise the
 summary” is a startable action. A recommendation episode adds a textual stopping boundary without
@@ -135,7 +138,9 @@ added when the interpretation workflow provides meaningful signals to observe. S
 10. The focused UI presents the entry point, stopping condition, and concise reason.
 11. Episode events record explicit responses and reported outcomes without inferring an answer
     from silence. Replacement and follow-on recommendations receive new immutable boundaries.
-12. Partial progress may create a checkpoint for a future re-entry episode.
+12. Partial progress may atomically create a user-authored checkpoint. When no episode is current,
+    the newest eligible checkpoint is consumed into a bounded child episode before ordinary
+    candidate selection.
 
 The API and lifecycle details are documented in the
 [recommendation contract](recommendation-contract.md).

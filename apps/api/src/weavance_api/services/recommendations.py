@@ -9,7 +9,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from weavance_api.models import Action, EpisodeEvent, RecommendationEpisode, Task
+from weavance_api.models import (
+    Action,
+    EpisodeEvent,
+    RecommendationEpisode,
+    ReentryCheckpoint,
+    Task,
+)
 from weavance_api.models.recommendation import EpisodeEventType
 from weavance_api.observability import get_logger
 from weavance_api.schemas.recommendation import (
@@ -19,6 +25,7 @@ from weavance_api.schemas.recommendation import (
     EpisodeState,
     RecommendationEpisodeResponse,
     RecommendationTransitionResponse,
+    ReentryCheckpointResponse,
 )
 
 logger = get_logger(__name__)
@@ -75,6 +82,30 @@ async def create_recommendation(
     *,
     context: ContextSnapshot,
 ) -> RecommendationEpisodeResponse:
+    current = await _get_current_episode(session)
+    if current is not None:
+        return _episode_response(current)
+
+    checkpoint = await _get_open_reentry_checkpoint(session, lock_for_update=True)
+    if checkpoint is not None:
+        episode = _build_reentry_episode(checkpoint, context=context)
+        session.add(episode)
+        checkpoint.reentry_episode = episode
+        await session.commit()
+        episode = await _load_episode(session, episode.id)
+        logger.info(
+            "recommendation.reentry.created",
+            recommendation_id=episode.id,
+            task_id=episode.task_id,
+            reentry_checkpoint_id=checkpoint.id,
+            strategy_name=episode.strategy_name,
+            strategy_version=episode.strategy_version,
+        )
+        return _episode_response(episode)
+
+    # A concurrent request may have consumed the checkpoint while this request
+    # waited for its row lock. Return the episode it created instead of falling
+    # through to a second ordinary recommendation.
     current = await _get_current_episode(session)
     if current is not None:
         return _episode_response(current)
@@ -163,9 +194,21 @@ async def record_episode_event(
         )
 
     payload: dict[str, str] = {}
+    checkpoint: ReentryCheckpoint | None = None
     if replacement is not None:
         session.add(replacement)
         payload["replacement_episode_id"] = str(replacement.id)
+
+    if request.reentry_point is not None:
+        checkpoint = ReentryCheckpoint(
+            id=uuid4(),
+            task_id=episode.task_id,
+            action_id=episode.action_id,
+            source_episode_id=episode.id,
+            entry_point=request.reentry_point,
+        )
+        session.add(checkpoint)
+        payload["reentry_checkpoint_id"] = str(checkpoint.id)
 
     event = EpisodeEvent(
         id=uuid4(),
@@ -182,11 +225,14 @@ async def record_episode_event(
         else None
     )
     loaded_event = next(item for item in episode.events if item.id == event.id)
+    if checkpoint is not None:
+        await session.refresh(checkpoint)
     logger.info(
         "recommendation.event.recorded",
         recommendation_id=episode.id,
         event_type=event_type,
         replacement_id=loaded_replacement.id if loaded_replacement is not None else None,
+        reentry_checkpoint_id=checkpoint.id if checkpoint is not None else None,
     )
     return RecommendationTransitionResponse(
         event=EpisodeEventResponse.model_validate(loaded_event),
@@ -194,6 +240,11 @@ async def record_episode_event(
         replacement=(
             _episode_response(loaded_replacement)
             if loaded_replacement is not None
+            else None
+        ),
+        checkpoint=(
+            ReentryCheckpointResponse.model_validate(checkpoint)
+            if checkpoint is not None
             else None
         ),
     )
@@ -249,6 +300,33 @@ async def _load_episode(
     if episode is None:
         raise RecommendationNotFoundError
     return episode
+
+
+async def _get_open_reentry_checkpoint(
+    session: AsyncSession,
+    *,
+    lock_for_update: bool = False,
+) -> ReentryCheckpoint | None:
+    statement = (
+        select(ReentryCheckpoint)
+        .join(ReentryCheckpoint.task)
+        .join(ReentryCheckpoint.action)
+        .options(
+            selectinload(ReentryCheckpoint.task),
+            selectinload(ReentryCheckpoint.action),
+        )
+        .where(
+            ReentryCheckpoint.reentry_episode_id.is_(None),
+            Task.status == "active",
+            Action.status == "active",
+            Action.task_id == ReentryCheckpoint.task_id,
+        )
+        .order_by(ReentryCheckpoint.created_at.desc(), ReentryCheckpoint.id.desc())
+        .limit(1)
+    )
+    if lock_for_update:
+        statement = statement.with_for_update(of=ReentryCheckpoint)
+    return cast(ReentryCheckpoint | None, await session.scalar(statement))
 
 
 async def _eligible_candidates(session: AsyncSession) -> list[Candidate]:
@@ -409,6 +487,32 @@ def _build_episode(
         context_snapshot=context.model_dump(mode="json"),
         explanation_factors=factors,
         reason=reason,
+        strategy_name=STRATEGY_NAME,
+        strategy_version=STRATEGY_VERSION,
+    )
+
+
+def _build_reentry_episode(
+    checkpoint: ReentryCheckpoint,
+    *,
+    context: ContextSnapshot,
+) -> RecommendationEpisode:
+    return RecommendationEpisode(
+        id=uuid4(),
+        task_id=checkpoint.task_id,
+        action_id=checkpoint.action_id,
+        parent_episode_id=checkpoint.source_episode_id,
+        entry_point=checkpoint.entry_point,
+        stopping_condition=(
+            "You have completed this saved next step. Then pause and choose again."
+        ),
+        context_snapshot=context.model_dump(mode="json"),
+        explanation_factors=[
+            {"kind": "reentry_checkpoint", "value": str(checkpoint.id)}
+        ],
+        reason=(
+            "You saved this as the place you wanted to pick back up after making progress."
+        ),
         strategy_name=STRATEGY_NAME,
         strategy_version=STRATEGY_VERSION,
     )

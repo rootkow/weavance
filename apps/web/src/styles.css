@@ -585,6 +585,45 @@ textarea::placeholder {
   text-align: center;
 }
 
+.checkpoint-view {
+  display: grid;
+  max-width: 40rem;
+  margin-inline: auto;
+}
+
+.checkpoint-view h1 {
+  max-width: 18ch;
+}
+
+.checkpoint-view .lede {
+  max-width: 35rem;
+}
+
+.checkpoint-form {
+  display: grid;
+  margin-top: 1.75rem;
+}
+
+.checkpoint-guidance {
+  margin-top: 0.55rem;
+  color: #65748a;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.checkpoint-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.2rem;
+}
+
+.checkpoint-back {
+  width: fit-content;
+  justify-self: center;
+  margin-top: 1rem;
+}
+
 .outcome-state {
   display: grid;
   justify-items: center;
@@ -1158,7 +1197,8 @@ textarea::placeholder {
   .task-list-intro,
   .task-list-footer,
   .existing-tasks-note,
-  .success-actions {
+  .success-actions,
+  .checkpoint-actions {
     align-items: stretch;
     flex-direction: column;
   }
@@ -1195,7 +1235,9 @@ textarea::placeholder {
 
   .existing-tasks-note .secondary-button,
   .success-actions .primary-button,
-  .success-actions .secondary-button {
+  .success-actions .secondary-button,
+  .checkpoint-actions .primary-button,
+  .checkpoint-actions .secondary-button {
     width: 100%;
   }
 

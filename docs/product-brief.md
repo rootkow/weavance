@@ -46,11 +46,13 @@ The main interface prioritizes:
 
 1. An active commitment
 2. A pending interpretation review
-3. One bounded recommendation from the saved task set
-4. A new brain dump
+3. A saved re-entry checkpoint
+4. One bounded recommendation from the saved task set
+5. A new brain dump
 
 The full task list remains available through an explicit action instead of becoming the default
-screen. A future re-entry opportunity will take precedence once checkpoints exist.
+screen. When no commitment or interpretation review is active, a saved re-entry checkpoint takes
+precedence over ordinary recommendation selection.
 
 ## Initial user
 
@@ -67,11 +69,11 @@ For the first dogfooding period, the product currently records:
 - Recommendation accepted, resized, deferred, swapped, or overwhelmed
 - User-reported outcome: done for now, progress made, did not start, or keep going
 - Whether the promised stopping point was honored
+- Whether the user saved a re-entry checkpoint and later accepted the resulting recommendation
 
 It should later add:
 
 - Optional feedback that the recommendation helped or added pressure
-- Whether a later re-entry recommendation was accepted
 
 No outcome is inferred when the user does not report one.
 
