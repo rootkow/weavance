@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from weavance_api.database import Base
+from weavance_api.domain.recommendation import MAX_REENTRY_POINT_CHARACTERS
 
 EpisodeEventType = Literal[
     "accepted",
@@ -129,6 +130,10 @@ class ReentryCheckpoint(Base):
         CheckConstraint(
             "length(btrim(entry_point)) > 0",
             name="ck_reentry_checkpoints_entry_point_not_blank",
+        ),
+        CheckConstraint(
+            f"length(entry_point) <= {MAX_REENTRY_POINT_CHARACTERS}",
+            name="ck_reentry_checkpoints_entry_point_length",
         ),
     )
 

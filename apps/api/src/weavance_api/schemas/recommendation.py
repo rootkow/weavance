@@ -11,10 +11,16 @@ from pydantic import (
     model_validator,
 )
 
+from weavance_api.domain.recommendation import MAX_REENTRY_POINT_CHARACTERS
+
 NonBlankString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 ReentryPoint = Annotated[
     str,
-    StringConstraints(strip_whitespace=True, min_length=1, max_length=500),
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+        max_length=MAX_REENTRY_POINT_CHARACTERS,
+    ),
 ]
 EpisodeState = Literal["proposed", "accepted", "closed"]
 EpisodeEventTypeValue = Literal[

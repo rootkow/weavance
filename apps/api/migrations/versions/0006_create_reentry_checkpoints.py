@@ -16,6 +16,8 @@ down_revision: str | None = "0005"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+MAX_REENTRY_POINT_CHARACTERS = 500
+
 
 def upgrade() -> None:
     op.create_table(
@@ -35,6 +37,10 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "length(btrim(entry_point)) > 0",
             name="ck_reentry_checkpoints_entry_point_not_blank",
+        ),
+        sa.CheckConstraint(
+            f"length(entry_point) <= {MAX_REENTRY_POINT_CHARACTERS}",
+            name="ck_reentry_checkpoints_entry_point_length",
         ),
         sa.ForeignKeyConstraint(
             ["action_id"],
