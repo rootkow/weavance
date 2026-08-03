@@ -1183,3 +1183,5 @@ obj/
 ### USER DEFINED ###
 ####################
 
+# MkDocs build output
+/site/

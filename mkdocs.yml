@@ -1,0 +1,33 @@
+site_name: Weavance
+site_description: Product, architecture, contracts, and decisions for Weavance
+repo_name: rootkow/weavance
+repo_url: https://github.com/rootkow/weavance
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+site_dir: site
+strict: true
+
+theme:
+  name: mkdocs
+
+markdown_extensions:
+  - fenced_code
+  - tables
+
+nav:
+  - Home: index.md
+  - Product:
+      - Product brief: product-brief.md
+      - MVP scope: mvp.md
+  - Architecture:
+      - Overview: architecture.md
+      - Interpretation contract: interpretation-contract.md
+      - Recommendation contract: recommendation-contract.md
+  - Decisions:
+      - "ADR 0001: Web-first monorepo": decisions/0001-monorepo.md
+      - "ADR 0002: Bounded AI": decisions/0002-bounded-ai.md
+      - "ADR 0003: Inference, policy, and recommendation": decisions/0003-inference-policy-and-recommendation.md
+      - "ADR 0004: PostgreSQL and Alembic": decisions/0004-postgresql-and-alembic.md
+      - "ADR 0005: Observability foundation": decisions/0005-observability-foundation.md
+      - "ADR 0006: Bounded recommendation episodes": decisions/0006-bounded-recommendation-episodes.md
