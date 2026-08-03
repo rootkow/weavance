@@ -2,9 +2,16 @@
 
 ## Repository Workflow
 
-- Start each unit of work from an up-to-date `main` branch and create a dedicated branch using an appropriate prefix, such as `feature/`, `fix/`, or `docs/`.
+- Start each unit of work from an up-to-date `main` branch and create a dedicated branch using an appropriate prefix.
 - Commit and push each completed unit of work, then open a separate pull request for it.
 - Verify that all CI checks pass before considering the unit of work complete.
+
+## Branch Naming
+
+- Branch names MUST use one of these prefixes: `feature/`, `fix/`, `docs/`, or `chore/`.
+- Use the prefix that matches the work type.
+- These repository-specific rules override naming conventions from tools, skills, or global instructions.
+- Before editing files, verify and report the intended branch name.
 
 ## Project Backlog
 
