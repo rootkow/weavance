@@ -68,12 +68,12 @@ proposals become authoritative application state.
 
 The orchestration layer:
 
-- construct the request from the persisted `Capture` without changing its text
-- verify that the returned proposal references the requested capture
-- validate the complete proposal before persistence
-- append a new versioned interpretation instead of overwriting an earlier proposal
-- preserve the request time zone and reference time alongside interpreter and schema information
-- serialize version assignment per capture so concurrent requests cannot claim the same version
+- constructs the request from the persisted `Capture` without changing its text
+- verifies that the returned proposal references the requested capture
+- validates the complete proposal before persistence
+- appends a new versioned interpretation instead of overwriting an earlier proposal
+- preserves the request time zone and reference time alongside interpreter and schema information
+- serializes version assignment per capture so concurrent requests cannot claim the same version
 
 The structured review writes user edits as a new confirmed version. Changed and newly added fields
 carry direct user-correction provenance; unchanged values retain their original provenance. Removed
