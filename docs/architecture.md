@@ -57,7 +57,7 @@ The current provider-neutral boundary is documented in the
 [interpretation contract](interpretation-contract.md).
 
 The deterministic policy layer owns enforceable behavior: explicit deferrals, user boundaries,
-dependency eligibility, completed or canceled state, and the precedence of user corrections.
+dependency eligibility, completed or archived state, and the precedence of user corrections.
 Subjective values such as task duration remain sourced estimates for the recommendation strategy
 to consider.
 
@@ -78,9 +78,11 @@ Interpretation output distinguishes among:
 | Estimate | “This may take 20–40 minutes” | Store its range and confidence |
 | Policy | “Honor this deferral through today” | Enforce deterministically |
 
-Important interpreted values carry provenance such as `user`, `connected_source`, `model`,
-`default`, or `learned`. Explicit user corrections are authoritative. Unknown values remain
-unknown unless asking would materially change the recommendation.
+Important interpreted values carry two separate provenance dimensions. Evidence sources include
+`user_text`, `user_correction`, `connected_source`, `observed_behavior`, `general_knowledge`, and
+`default`; derivation methods include `direct`, `model`, `rule`, and `learned`. Explicit user
+corrections are authoritative. Unknown values remain unknown unless asking would materially change
+the recommendation.
 
 ## Target domain concepts
 

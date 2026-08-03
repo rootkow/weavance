@@ -187,4 +187,6 @@ GitHub Actions runs the same checks against an isolated PostgreSQL service.
 - [MVP scope](docs/mvp.md): implementation progress, acceptance criteria, and non-goals
 - [Architecture](docs/architecture.md): current and target system boundaries
 - [Interpretation contract](docs/interpretation-contract.md): provider-neutral typed interface
+- [Recommendation contract](docs/recommendation-contract.md): bounded episodes, events, checkpoints,
+  and API behavior
 - [Architecture decisions](docs/decisions): accepted and superseded ADRs

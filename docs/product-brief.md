@@ -40,9 +40,9 @@ reconstruct the plan.
 8. **Important decisions stay bounded and explainable.** Model suggestions follow deterministic
    rules and include clear reasons.
 
-## Interaction priority
+## Target interaction priority
 
-The main interface prioritizes:
+The intended main interface prioritizes:
 
 1. An active commitment
 2. A pending interpretation review
@@ -53,6 +53,10 @@ The main interface prioritizes:
 The full task list remains available through an explicit action instead of becoming the default
 screen. When no commitment or interpretation review is active, a saved re-entry checkpoint takes
 precedence over ordinary recommendation selection.
+
+The current UI preserves a pending review only within the active browser session. After a page
+reload, startup can restore an accepted commitment or open recommendation, including one created
+from a saved re-entry checkpoint, but it cannot yet restore an unconfirmed interpretation review.
 
 ## Initial user
 
