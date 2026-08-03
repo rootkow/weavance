@@ -116,7 +116,7 @@ docs/       Product, architecture, contract, and decision records
 
 ### Set up the project
 
-Install the API and web dependencies:
+Install the documentation, API, and web dependencies:
 
 ```bash
 make install
@@ -154,8 +154,9 @@ Open `http://localhost:5173`. The API health endpoint is available at
 `http://localhost:8000/health`, and its generated OpenAPI interface is available at
 `http://localhost:8000/docs`.
 
-The Make targets use an active virtual environment when one is available, including environments
-managed by `pyenv-virtualenv`. Otherwise, uv uses `apps/api/.venv`.
+The API Make targets use an active virtual environment when one is available, including
+environments managed by `pyenv-virtualenv`. Otherwise, uv uses `apps/api/.venv`. Documentation
+tooling uses the root `.venv`.
 
 To run the entire stack with Compose instead:
 
@@ -163,9 +164,23 @@ To run the entire stack with Compose instead:
 docker compose up --build
 ```
 
+### Documentation site
+
+Serve the MkDocs site with live reload:
+
+```bash
+make docs-serve
+```
+
+Open `http://127.0.0.1:8000`. Build the static site into `site/` with:
+
+```bash
+make docs-build
+```
+
 ## Verification
 
-Run linting, type checks, unit tests, and the production web build:
+Run linting, type checks, unit tests, the documentation build, and the production web build:
 
 ```bash
 make check
