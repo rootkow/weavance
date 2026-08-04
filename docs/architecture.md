@@ -68,6 +68,10 @@ candidate exists, and otherwise uses stable creation order with an honest fallba
 never describes unknown difficulty or capacity as fact. Later strategies may use a model,
 personalization, or a hybrid without changing the episode lifecycle.
 
+The intended model roles, learning signals, evidence precedence, and staged personalization plan
+are documented in
+[LLM integration and adaptive personalization](llm-personalization.md).
+
 ## Knowledge and uncertainty
 
 Interpretation output distinguishes among:
