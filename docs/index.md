@@ -17,6 +17,7 @@ the architectural decisions behind the project.
 - [Recommendation contract](recommendation-contract.md) defines bounded recommendation episodes,
   events, checkpoints, and HTTP behavior.
 - [LLM integration and adaptive personalization](llm-personalization.md) describes intended model
-  roles, learning signals, authority boundaries, and the staged delivery plan.
+  roles, cross-strategy semantic safety, learning signals, authority boundaries, and the staged
+  delivery plan.
 
 Architectural decisions are preserved as ADRs in the **Decisions** section.

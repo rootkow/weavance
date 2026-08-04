@@ -84,4 +84,8 @@ No outcome is inferred when the user does not report one.
 ## Safety boundary
 
 Weavance provides activation and planning support, not medical diagnosis or treatment. It avoids
-clinical claims and does not present inferred mental states as facts.
+clinical claims and does not present inferred mental states as facts. The current deterministic
+interpreter does not classify the semantic risk of free-text captures, so this boundary is accepted
+product direction rather than implemented enforcement. [ADR 0007](decisions/0007-cross-strategy-semantic-safety.md)
+requires one application-owned boundary across deterministic, hosted, local, hybrid, and fallback
+strategies before public or unattended deployment or live model output.

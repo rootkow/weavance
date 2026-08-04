@@ -4,8 +4,9 @@
 
 This document records the intended product and architecture direction for adding model-assisted
 interpretation, recommendations, and longitudinal personalization to Weavance. It expands the
-accepted boundaries in [ADR 0003](decisions/0003-inference-policy-and-recommendation.md) and
-[ADR 0006](decisions/0006-bounded-recommendation-episodes.md).
+accepted boundaries in [ADR 0003](decisions/0003-inference-policy-and-recommendation.md),
+[ADR 0006](decisions/0006-bounded-recommendation-episodes.md), and
+[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md).
 
 The provider-neutral interpretation contract, deterministic fallback, persisted context snapshots,
 bounded recommendation episodes, explicit episode responses, and user-authored re-entry
@@ -14,10 +15,14 @@ available time, easier-work requests, and constraints remains planned. A live mo
 preferences, model-assisted recommendation strategies, and application-owned semantic safety
 controls are not implemented yet.
 
-This is a design direction rather than a final persistence or API contract. Sections labeled
-**Proposed** identify details that still need an ADR or implementation decision.
+This is a design direction rather than a final persistence or API contract. Each substantive
+section distinguishes **Implemented**, **Accepted direction**, and **Proposed** behavior. Accepted
+direction is part of the product or architecture contract but may not be implemented yet. Proposed
+details still require an explicit implementation or architecture decision.
 
 ## Product intent
+
+**Accepted direction:**
 
 The LLM should help Weavance understand language and make useful suggestions where rigid rules are
 not enough. Over time, the product should adapt to what the user explicitly says and reports so
@@ -30,32 +35,45 @@ The objective is not to maximize task completions, time in the application, or a
 is to help the user begin a useful bounded commitment and find a manageable way back after an
 interruption while preserving their authority.
 
-## Ethical AI and intended-use boundary
+## Semantic safety and intended-use boundary
+
+**Accepted direction; not implemented:**
 
 Weavance is an experimental personal project built by and for its author. That narrow intended use
-reduces the initial deployment surface, but it does not make model output inherently safe or remove
-the need for application-owned safeguards.
+reduces the initial deployment surface, but it does not make capture content or generated output
+inherently safe and does not remove the need for application-owned safeguards.
 
-The intended LLM role is limited to personal activation and planning support. It is not a source of
-medical or mental-health care, legal or financial advice, emergency assistance, or instructions
-that facilitate harm to the user or anyone else. Safety constraints are non-overridable: they take
-precedence over current user instructions, confirmed preferences, learned hypotheses, and model
-output.
+Ethical AI in Weavance means preserving user agency, representing uncertainty honestly, minimizing
+unnecessary sensitive-data exposure, and taking responsibility for harmful product behavior rather
+than delegating that responsibility to a model provider.
 
-At this design stage, Weavance has no application-owned semantic safety system. A model integration
-would therefore rely primarily on the selected model's own guardrails for ethical content handling.
-Provider guardrails vary, can change, and may be absent or weaker in a local model. A live
-integration must not ship on that basis: provider guardrails should be treated as defense in depth
-rather than as the final application safety boundary.
+The product's intended role is limited to personal activation and planning support. It is not a
+source of medical or mental-health care, legal or financial advice, emergency assistance, or
+instructions that facilitate harm to the user or anyone else. Safety constraints are
+non-overridable: they take precedence over current user instructions, confirmed preferences,
+learned hypotheses, and strategy output.
 
-Before a live model is enabled, Weavance should define and test an application-level safety policy
-that covers at least:
+The exposure already exists without a model. The current deterministic interpreter copies each
+nonblank capture line into an editable task and starting-action proposal without classifying its
+meaning. It does not elaborate on the text or silently make the proposal canonical, but it can
+still present distressing, harmful, or high-stakes content as an ordinary task. User review and
+lifecycle validation do not constitute semantic safety handling.
+
+At this design stage, Weavance has no application-owned semantic safety mechanism. A model
+integration would also depend on the selected model's own guardrails for content handling.
+Provider guardrails vary, can change, and may be absent or weaker in a local model. They must be
+treated as defense in depth rather than as the application safety boundary.
+
+As accepted in [ADR 0007](decisions/0007-cross-strategy-semantic-safety.md), every capture-derived
+proposal and recommendation strategy—including the current deterministic strategy and any
+fallback—must operate within one application-owned safety boundary. Before that boundary is
+implemented, Weavance should define and test:
 
 - which requests and proposed actions the application must not turn into task proposals,
   decompositions, recommendations, or assistance
 - how the system responds safely when a boundary is reached, including a neutral refusal and an
   appropriate path to human or emergency support when relevant
-- how unsafe model output is prevented from becoming a proposal, recommendation, or learning signal
+- how unsafe content is prevented from becoming a proposal, recommendation, or learning signal
 - how hosted and local providers are assessed when their safety behavior differs
 - adversarial and regression evaluations for harmful, manipulative, high-stakes, and crisis-related
   inputs and outputs
@@ -63,19 +81,20 @@ that covers at least:
   in routine logs
 
 A safety response must not diagnose the user, turn sensitive input into a durable personal trait,
-or silently treat the input as evidence for future personalization.
+or silently treat the input as evidence for future personalization. Exact classifications,
+response language, escalation behavior, and implementation mechanisms remain proposed.
 
-## Established boundaries
+## Current behavior and implemented boundaries
 
-The following decisions are already part of the Weavance product contract:
+**Implemented:**
 
-- Model output is a proposal, not authoritative application state.
+The following behavior exists today:
+
+- Interpreter output is a proposal, not authoritative application state.
 - Raw captures and versioned interpretations are preserved so suggestions remain traceable.
 - The user reviews material task and action interpretations before they become canonical state.
 - Deterministic policy enforces lifecycle state, eligibility, explicit boundaries, and invariants.
 - Recommendation strategies are replaceable and are validated by policy before persistence.
-- Non-overridable ethical and safety policy takes precedence over user instructions,
-  personalization, and model output.
 - Recommendations use explicit context rather than claiming to know capacity, motivation, or
   mental state.
 - One recommendation is a bounded episode with an entry point, stopping condition, reason, and
@@ -83,10 +102,13 @@ The following decisions are already part of the Weavance product contract:
 - Accepting a recommendation, beginning work, satisfying its boundary, and completing the task are
   distinct events.
 - Silence is not success, failure, avoidance, or any other behavioral signal.
-- The application must retain a useful deterministic fallback and must not require a model provider
-  or API key for its core data to remain accessible.
+- A deterministic fallback keeps core data accessible without a model provider or API key.
+- No semantic safety mechanism currently classifies a capture or prevents harmful or high-stakes
+  content from becoming an editable deterministic proposal.
 
 ## Appropriate uses of an LLM
+
+**Proposed:**
 
 ### Interpret captures
 
@@ -152,7 +174,9 @@ that clarification does not become another planning burden.
 
 ## Uses that remain out of bounds
 
-An LLM must not:
+**Accepted direction:**
+
+No deterministic, hosted, local, hybrid, or fallback interpretation or recommendation strategy may:
 
 - complete, archive, defer, delete, or otherwise mutate canonical state without an explicit user
   action
@@ -170,24 +194,37 @@ An LLM must not:
 
 ## System boundary
 
+**Proposed target:**
+
 ```mermaid
 flowchart TD
-    INPUTS["Capture, canonical state, and explicit context"] --> INFER["Interpreter and recommendation strategies"]
+    INPUTS["Capture, canonical state, and explicit context"] --> SAFETY_IN["Application semantic safety boundary"]
+    SAFETY_IN -->|"Allowed"| INFER["Interpreter or recommendation strategy"]
+    SAFETY_IN -->|"Boundary reached"| SAFE["Safe bounded response"]
     PROFILE["Confirmed preferences and relevant episode evidence"] --> INFER
+    INFER -->|"Unavailable or invalid"| FALLBACK["Deterministic fallback"]
     INFER --> PROPOSAL["Typed, sourced proposal"]
-    PROPOSAL --> POLICY["Deterministic policy validation"]
-    POLICY --> EPISODE["Bounded recommendation episode"]
+    FALLBACK --> PROPOSAL
+    PROPOSAL --> SAFETY_OUT["Application semantic safety boundary"]
+    SAFETY_OUT -->|"Rejected"| SAFE
+    SAFETY_OUT -->|"Allowed"| POLICY["Deterministic policy validation"]
+    POLICY -->|"Rejected"| NO_EPISODE["No episode; bounded error or retry"]
+    POLICY -->|"Valid"| EPISODE["Bounded recommendation episode"]
     EPISODE --> EVENTS["Explicit responses and reported outcomes"]
     EVENTS --> LEARN["Inspect, confirm, or revise learned hypotheses"]
     LEARN --> PROFILE
 ```
 
-The model-facing layer receives a deliberately selected view of application state. It should not
-receive an undifferentiated dump of the user's entire history. Prompt inputs, model/provider
-identity, strategy version, output schema version, and the facts used in an explanation must remain
+The same safety boundary applies before and after every deterministic, hosted, or local strategy;
+a deterministic fallback is not presumed safe merely because it does not generate new language.
+The model-facing layer receives a deliberately selected view of application state rather than an
+undifferentiated dump of the user's entire history. Prompt inputs, model/provider identity,
+strategy version, output schema version, and the facts used in an explanation must remain
 traceable enough to reproduce or audit a recommendation.
 
 ## What “learning” means
+
+**Proposed:**
 
 Initial personalization should not mean fine-tuning a model on one user's data. It should mean
 maintaining structured, inspectable knowledge that any recommendation strategy can use.
@@ -207,7 +244,8 @@ The application learns from evidence such as:
 - Start, Make it smaller, Not right now, Swap task, and I'm overwhelmed responses
 - Done for now, progress made, did not start, and keep going reports
 - whether the user says the stopping point was honored
-- explicit feedback that a suggestion helped or added pressure
+- planned optional feedback that a suggestion helped or added pressure; its event and UI channel are
+  not defined yet
 - re-entry checkpoints and later re-entry responses
 
 Task completion remains a separate lifecycle event. It must not retroactively imply that every
@@ -215,7 +253,12 @@ earlier recommendation was useful. Likewise, no response creates no learning sig
 
 ## Evidence precedence
 
-When information conflicts, recommendation behavior should follow this order:
+**Proposed:**
+
+A conflict exists when two in-scope items provide incompatible values or guidance for the same
+decision dimension, such as whether an action is eligible, how long its starting commitment should
+be, or which constraint applies. Resolve each dimension independently after excluding expired,
+out-of-scope, and inapplicable evidence. Higher-authority evidence wins:
 
 1. Non-overridable ethical, safety, and application policy
 2. The user's current explicit instruction or correction
@@ -225,11 +268,17 @@ When information conflicts, recommendation behavior should follow this order:
 6. A behavior-derived hypothesis supported by multiple observations
 7. General knowledge or a product default
 
-Newer evidence does not always erase older evidence. A preference can be scoped to a task type,
-time constraint, or situation, and it can weaken when it has not been supported recently. Current
-explicit intent always wins within the non-overridable ethical, safety, and application boundaries.
+Within one authority level, prefer the narrower applicable scope and then the newer directly
+relevant evidence. A confidence or recommendation score cannot promote lower-authority evidence
+over higher-authority evidence. Current explicit intent always wins within non-overridable ethical,
+safety, and application boundaries.
 
-## Proposed personalization record
+Newer evidence does not always erase older evidence. A preference can be scoped to a task type,
+time constraint, or situation. Contradicted, expired, or sufficiently decayed hypotheses become
+ineligible; they do not move below a product default while remaining active. If no hypothesis
+remains eligible, the strategy may use the applicable default.
+
+## Personalization record
 
 **Proposed:** Store learned knowledge separately from raw episode history. A future preference or
 hypothesis record should be able to answer:
@@ -251,8 +300,11 @@ scope: available_time <= 20 minutes
 evidence_source: observed_behavior
 derivation: learned
 supporting_event_ids: [...]
-confidence: 0.72
+derivation_confidence: 0.72
+support_count: 5
+confirmation_status: unconfirmed
 status: hypothesis
+first_supported_at: ...
 last_supported_at: ...
 ```
 
@@ -260,6 +312,8 @@ This should be interpreted narrowly: “a five-minute starting point may work be
 context.” It must not become “the user lacks capacity for longer work.”
 
 ## Confidence and provenance
+
+**Implemented for interpretation; proposed for personalization:**
 
 Confidence describes the system's certainty that a particular derivation is supported by its
 evidence. It does not mean that the task is important, the action is a good recommendation, or the
@@ -278,7 +332,8 @@ number:
 - **User confirmation state:** Whether the user explicitly accepted the learned value
 
 A user-confirmed preference can therefore outrank a higher-scoring behavioral hypothesis even if
-the hypothesis has more observations.
+the hypothesis has more observations. Recommendation score belongs to the episode or strategy
+decision rather than the durable personalization record.
 
 ## Applying learned knowledge
 
@@ -314,6 +369,8 @@ when the user explicitly requests a longer work block.
 
 ## Explanations
 
+**Proposed for model-assisted behavior:**
+
 An explanation should name the few decision factors that actually changed the recommendation. It
 should distinguish current context, explicit preferences, and tentative learned patterns.
 
@@ -334,8 +391,8 @@ state and turns behavior into a judgment.
 
 ## User control and privacy
 
-**Proposed:** Before behavior-derived personalization becomes active, the product should provide a
-small “What Weavance has learned” surface where the user can:
+**Proposed for personalization:** Before behavior-derived personalization becomes active, the
+product should provide a small “What Weavance has learned” surface where the user can:
 
 - inspect confirmed preferences and tentative hypotheses
 - see a concise explanation of their supporting evidence
@@ -343,30 +400,39 @@ small “What Weavance has learned” surface where the user can:
 - prevent an item from being learned again when appropriate
 - disable behavior-derived personalization while retaining basic task functionality
 
-Provider requests should include only the context needed for the current operation. User-authored
-content must remain out of routine operational logs. Retention, deletion, export, hosted-provider
-data handling, and local-model behavior require explicit product decisions before implementation.
+**Implemented:** User-authored content remains out of routine operational logs.
+
+**Proposed for model integration:** Provider requests should include only the context needed for
+the current operation. Retention, deletion, export, hosted-provider data handling, and local-model
+behavior require explicit product decisions before implementation.
 
 ## Reliability and degraded behavior
 
-Model integration should fail closed toward the existing deterministic behavior:
+**Proposed:**
+
+Model integration should degrade operationally toward the existing deterministic behavior, while
+recognizing that deterministic output is not automatically semantically safe:
 
 - Validate all model output against the provider-neutral typed contract.
 - Reject unknown fields and invalid canonical references.
 - Apply timeouts and bounded retries around provider calls.
-- Fall back to deterministic interpretation or recommendation when a model is unavailable.
+- Fall back to deterministic interpretation or recommendation when a model is unavailable, and
+  apply the same semantic safety boundary to the fallback output.
 - Never discard a capture because interpretation failed.
 - Never partially apply a proposal as canonical state.
 - Persist provider, model, prompt/strategy, and schema versions without making provider-specific
   fields part of the core domain.
 
 The deterministic fallback is intentionally modest. It protects availability and ownership of the
-user's data; it does not need to imitate the full quality of a model-assisted experience.
+user's data; it does not need to imitate the full quality of a model-assisted experience and must
+not be treated as a semantic safety control.
 
 ## Evaluation
 
-Model quality should be evaluated against the product boundaries, not only whether a suggestion
-sounds plausible.
+**Proposed:**
+
+Every interpretation and recommendation strategy should be evaluated against the product
+boundaries, not only whether a suggestion sounds plausible.
 
 ### Interpretation evaluation
 
@@ -392,11 +458,10 @@ sounds plausible.
 - prohibited-content assistance rate, which should be zero
 - safe handling of harmful, manipulative, high-stakes, and crisis-related inputs
 - resistance to user content that attempts to override system safety boundaries
-- provider and model regressions, including differences between hosted and local models
+- regressions across deterministic, hosted, and local strategies
 - whether a safety response avoids diagnosis, unnecessary sensitive-data retention, and learned
   profiling
-- whether failure or uncertainty produces a safe deterministic fallback rather than unchecked
-  model output
+- whether failure or uncertainty produces a bounded response rather than unchecked strategy output
 
 Acceptance alone is not success, and task completion alone does not identify which recommendation
 helped. Offline replay against versioned history can compare strategies without silently changing
@@ -405,15 +470,19 @@ engagement-oriented pressure.
 
 ## Delivery sequence
 
+**Proposed roadmap:**
+
 1. **Complete the episode loop — implemented.** Explicit pre-start responses, reported outcomes,
    and user-authored re-entry checkpoints now provide honest episode evidence without inferring
    outcomes from silence.
 2. **Collect explicit recommendation context.** Let the user supply available time, an easier-work
    request, and constraints through the UI so strategies receive meaningful current context rather
    than only the persisted empty/default snapshot.
-3. **Define and evaluate the application safety boundary.** Document prohibited assistance, safe
-   response and fallback behavior, provider requirements, privacy-preserving incident handling, and
-   an adversarial regression suite before exposing any live model output.
+3. **Implement and evaluate the application safety boundary.** Cover the existing capture and
+   deterministic recommendation paths, document prohibited assistance, safe response and fallback
+   behavior, provider requirements, privacy-preserving incident handling, and an adversarial
+   regression suite. Complete this before public or unattended deployment and before exposing live
+   model output.
 4. **Live interpretation provider.** Implement one hosted or local model behind the existing
    `CaptureInterpreter` protocol, with structured output, timeouts, versioning, and deterministic
    and safety fallback.
@@ -430,7 +499,8 @@ This sequence ensures Weavance collects honest signals before claiming to learn 
 ## Open decisions
 
 - Which hosted or local model should be the first production interpreter?
-- Which semantic safety rules must Weavance enforce independently of the selected provider?
+- Which exact semantic safety classifications and mechanisms should enforce ADR 0007 independently
+  of the selected strategy or provider?
 - What safe response and escalation behavior is appropriate when harmful or crisis-related content
   appears in a capture?
 - What evidence is required before a provider or model version is allowed to produce user-visible

@@ -15,6 +15,7 @@
 | Bounded recommendation episodes | Implemented with a transparent deterministic strategy and persisted context/explanation snapshots |
 | Pre-start responses and reported outcomes | Implemented as append-only episode events |
 | Re-entry checkpoints | Implemented for optional checkpoint capture, prioritized selection, and traceable consumption |
+| Application semantic safety boundary | Accepted in ADR 0007; not implemented; deterministic captures are not semantically classified |
 | Raw capture and complete proposal-history UI | Not designed yet |
 
 The current user-facing path saves a capture, creates a versioned interpretation, and lets the user
@@ -37,14 +38,21 @@ before ordinary selection.
 flowchart TD
     UI["Focused UI"] --> API["Application API"]
     API --> STORE["Capture persistence"]
-    STORE --> INTERPRET["Interpretation strategy"]
+    STORE --> SAFETY_IN["Semantic safety boundary"]
+    SAFETY_IN -->|"Allowed"| INTERPRET["Interpretation strategy"]
+    SAFETY_IN -->|"Boundary reached"| SAFE["Safe bounded response"]
     INTERPRET --> PROPOSAL["Typed proposal"]
-    PROPOSAL --> HISTORY["Versioned decision history"]
+    PROPOSAL --> SAFETY_OUT["Semantic safety boundary"]
+    SAFETY_OUT -->|"Rejected"| SAFE
+    SAFETY_OUT -->|"Allowed"| HISTORY["Versioned decision history"]
     HISTORY --> STATE["Canonical tasks and actions"]
     STATE --> POLICY["Deterministic policy"]
     POLICY --> RECOMMEND["Recommendation strategy"]
-    RECOMMEND --> VALIDATE["Policy validation"]
-    VALIDATE --> EPISODE["Bounded episode"]
+    RECOMMEND --> SAFETY_REC["Semantic safety boundary"]
+    SAFETY_REC -->|"Rejected"| SAFE
+    SAFETY_REC -->|"Allowed"| VALIDATE["Policy validation"]
+    VALIDATE -->|"Rejected"| NO_EPISODE["No episode; bounded error or retry"]
+    VALIDATE -->|"Valid"| EPISODE["Bounded episode"]
     EPISODE --> EVENTS["Responses and outcomes"]
     EVENTS -->|"Optional partial-progress note"| REENTRY["Re-entry checkpoint"]
     REENTRY -->|"Newest eligible checkpoint"| POLICY
@@ -55,6 +63,12 @@ proposals. A model may suggest task boundaries, possible actions, urgency, durat
 dependencies. These values remain uncertain proposals rather than application facts.
 The current provider-neutral boundary is documented in the
 [interpretation contract](interpretation-contract.md).
+
+The target semantic safety boundary applies to the existing deterministic interpreter and to every
+future hosted, local, hybrid, or fallback strategy. The current line-based interpreter does not
+classify capture meaning, so user review and lifecycle validation are the only current checks before
+materialization; neither is a semantic safety control. See
+[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md).
 
 The deterministic policy layer owns enforceable behavior: explicit deferrals, user boundaries,
 dependency eligibility, completed or archived state, and the precedence of user corrections.
@@ -68,8 +82,8 @@ candidate exists, and otherwise uses stable creation order with an honest fallba
 never describes unknown difficulty or capacity as fact. Later strategies may use a model,
 personalization, or a hybrid without changing the episode lifecycle.
 
-The intended model roles, learning signals, evidence precedence, and staged personalization plan
-are documented in
+The intended model roles, semantic safety boundary, learning signals, evidence precedence, and
+staged personalization plan are documented in
 [LLM integration and adaptive personalization](llm-personalization.md).
 
 ## Knowledge and uncertainty
@@ -129,22 +143,30 @@ added when the interpretation workflow provides meaningful signals to observe. S
 ## Request path
 
 1. The API stores the raw capture.
-2. An interpreter returns a typed proposal with provenance and uncertainty.
-3. The API validates and stores it as a new versioned interpretation linked to the capture.
-4. The current structured review records user additions, edits, removals, and confirmation as a new
+2. **Target:** The application safety boundary determines whether the capture may proceed through
+   ordinary interpretation or needs a bounded safety response. This step is not implemented yet.
+3. An interpreter returns a typed proposal with provenance and uncertainty.
+4. **Target:** The same safety boundary evaluates strategy output before it is displayed or used as
+   a learning signal. This step is not implemented yet.
+5. The API validates and stores an allowed proposal as a new versioned interpretation linked to the
+   capture.
+6. The current structured review records user additions, edits, removals, and confirmation as a new
    version.
-5. Confirmation materializes canonical tasks and actions in the same transaction while preserving
+7. Confirmation materializes canonical tasks and actions in the same transaction while preserving
    their links to capture and interpretation history.
-6. The task API lists and updates canonical state without rewriting that source history.
-7. Future reviews should narrow questions to ambiguity that would materially change the next
+8. The task API lists and updates canonical state without rewriting that source history.
+9. Future reviews should narrow questions to ambiguity that would materially change the next
    action.
-8. Deterministic policy removes inactive tasks and actions from consideration.
-9. The replaceable strategy combines eligible actions with the typed context snapshot and stores
-   one bounded recommendation episode.
-10. The focused UI presents the entry point, stopping condition, and concise reason.
-11. Episode events record explicit responses and reported outcomes without inferring an answer
+10. Deterministic policy removes inactive tasks and actions from consideration.
+11. The replaceable strategy combines eligible actions with the typed context snapshot and proposes
+    one bounded recommendation.
+12. **Target:** The application safety boundary evaluates the recommendation before persistence or
+    display. This step is not implemented yet.
+13. Deterministic policy validates and stores an allowed bounded recommendation episode.
+14. The focused UI presents the entry point, stopping condition, and concise reason.
+15. Episode events record explicit responses and reported outcomes without inferring an answer
     from silence. Replacement and follow-on recommendations receive new immutable boundaries.
-12. Partial progress may atomically create a user-authored checkpoint. When no episode is current,
+16. Partial progress may atomically create a user-authored checkpoint. When no episode is current,
     the newest eligible checkpoint is consumed into a bounded child episode before ordinary
     candidate selection.
 
