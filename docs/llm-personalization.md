@@ -18,7 +18,9 @@ controls are not implemented yet.
 This is a design direction rather than a final persistence or API contract. Each substantive
 section distinguishes **Implemented**, **Accepted direction**, and **Proposed** behavior. Accepted
 direction is part of the product or architecture contract but may not be implemented yet. Proposed
-details still require an explicit implementation or architecture decision.
+details still require an explicit implementation or architecture decision. A parenthesized
+qualifier may narrow a status to a feature scope or state its implementation status without
+creating another status category.
 
 ## Product intent
 
@@ -37,7 +39,7 @@ interruption while preserving their authority.
 
 ## Semantic safety and intended-use boundary
 
-**Accepted direction; not implemented:**
+**Accepted direction (not implemented):**
 
 Weavance is an experimental personal project built by and for its author. That narrow intended use
 reduces the initial deployment surface, but it does not make capture content or generated output
@@ -49,9 +51,9 @@ than delegating that responsibility to a model provider.
 
 The product's intended role is limited to personal activation and planning support. It is not a
 source of medical or mental-health care, legal or financial advice, emergency assistance, or
-instructions that facilitate harm to the user or anyone else. Safety constraints are
-non-overridable: they take precedence over current user instructions, confirmed preferences,
-learned hypotheses, and strategy output.
+instructions that facilitate harm to the user or anyone else. The safety boundary is
+non-overridable: content must pass through it before current user instructions, confirmed
+preferences, learned hypotheses, or strategy scores can affect a decision.
 
 The exposure already exists without a model. The current deterministic interpreter copies each
 nonblank capture line into an editable task and starting-action proposal without classifying its
@@ -79,6 +81,16 @@ implemented, Weavance should define and test:
   inputs and outputs
 - privacy-preserving review and incident handling without placing sensitive user-authored content
   in routine logs
+
+The raw capture remains the user's source record and is persisted unchanged before semantic safety
+evaluation. Reaching a safety boundary does not delete or discard it. Safety evaluation considers
+the full capture for context while assigning a disposition to the smallest reliable source unit;
+the exact unit may be a line, a span, or a proposed item depending on the future mechanism. In a
+mixed capture, allowed units continue through interpretation, while rejected units do not become
+tasks, actions, recommendations, or learning signals. A higher-priority safety response may precede
+display of the allowed proposals, but those proposals are not silently lost. The user should be
+told that some content was not converted, and the original text remains subject to user-controlled
+retention and deletion.
 
 A safety response must not diagnose the user, turn sensitive input into a durable personal trait,
 or silently treat the input as evidence for future personalization. Exact classifications,
@@ -174,7 +186,7 @@ that clarification does not become another planning burden.
 
 ## Uses that remain out of bounds
 
-**Accepted direction:**
+**Accepted direction (enforcement varies by item):**
 
 No deterministic, hosted, local, hybrid, or fallback interpretation or recommendation strategy may:
 
@@ -194,18 +206,19 @@ No deterministic, hosted, local, hybrid, or fallback interpretation or recommend
 
 ## System boundary
 
-**Proposed target:**
+**Proposed (target architecture):**
 
 ```mermaid
 flowchart TD
-    INPUTS["Capture, canonical state, and explicit context"] --> SAFETY_IN["Application semantic safety boundary"]
+    CAPTURE["Capture"] --> SAFETY_IN["Application semantic safety boundary (input)"]
     SAFETY_IN -->|"Allowed"| INFER["Interpreter or recommendation strategy"]
     SAFETY_IN -->|"Boundary reached"| SAFE["Safe bounded response"]
+    STATE["Canonical state and explicit context"] --> INFER
     PROFILE["Confirmed preferences and relevant episode evidence"] --> INFER
     INFER -->|"Unavailable or invalid"| FALLBACK["Deterministic fallback"]
-    INFER --> PROPOSAL["Typed, sourced proposal"]
+    INFER -->|"Valid"| PROPOSAL["Typed, sourced proposal"]
     FALLBACK --> PROPOSAL
-    PROPOSAL --> SAFETY_OUT["Application semantic safety boundary"]
+    PROPOSAL --> SAFETY_OUT["Application semantic safety boundary (output)"]
     SAFETY_OUT -->|"Rejected"| SAFE
     SAFETY_OUT -->|"Allowed"| POLICY["Deterministic policy validation"]
     POLICY -->|"Rejected"| NO_EPISODE["No episode; bounded error or retry"]
@@ -255,23 +268,25 @@ earlier recommendation was useful. Likewise, no response creates no learning sig
 
 **Proposed:**
 
+Semantic safety is a gate, not an evidence rank. Only content and strategy output that has passed
+the application safety boundary enters evidence resolution.
+
 A conflict exists when two in-scope items provide incompatible values or guidance for the same
 decision dimension, such as whether an action is eligible, how long its starting commitment should
 be, or which constraint applies. Resolve each dimension independently after excluding expired,
 out-of-scope, and inapplicable evidence. Higher-authority evidence wins:
 
-1. Non-overridable ethical, safety, and application policy
-2. The user's current explicit instruction or correction
-3. The current explicit context snapshot and boundaries
-4. A confirmed durable fact or preference
-5. A user-reported outcome or checkpoint relevant to the same work
-6. A behavior-derived hypothesis supported by multiple observations
-7. General knowledge or a product default
+1. The user's current explicit instruction or correction
+2. The current explicit context snapshot and boundaries
+3. A confirmed durable fact or preference
+4. A user-reported outcome or checkpoint relevant to the same work
+5. A behavior-derived hypothesis supported by multiple observations
+6. General knowledge or a product default
 
 Within one authority level, prefer the narrower applicable scope and then the newer directly
 relevant evidence. A confidence or recommendation score cannot promote lower-authority evidence
-over higher-authority evidence. Current explicit intent always wins within non-overridable ethical,
-safety, and application boundaries.
+over higher-authority evidence. Current explicit intent always wins among eligible evidence,
+subject to deterministic application policy.
 
 Newer evidence does not always erase older evidence. A preference can be scoped to a task type,
 time constraint, or situation. Contradicted, expired, or sufficiently decayed hypotheses become
@@ -313,7 +328,7 @@ context.” It must not become “the user lacks capacity for longer work.”
 
 ## Confidence and provenance
 
-**Implemented for interpretation; proposed for personalization:**
+**Implemented (interpretation); Proposed (personalization):**
 
 Confidence describes the system's certainty that a particular derivation is supported by its
 evidence. It does not mean that the task is important, the action is a good recommendation, or the
@@ -369,7 +384,7 @@ when the user explicitly requests a longer work block.
 
 ## Explanations
 
-**Proposed for model-assisted behavior:**
+**Proposed (model-assisted behavior):**
 
 An explanation should name the few decision factors that actually changed the recommendation. It
 should distinguish current context, explicit preferences, and tentative learned patterns.
@@ -391,7 +406,7 @@ state and turns behavior into a judgment.
 
 ## User control and privacy
 
-**Proposed for personalization:** Before behavior-derived personalization becomes active, the
+**Proposed (personalization):** Before behavior-derived personalization becomes active, the
 product should provide a small “What Weavance has learned” surface where the user can:
 
 - inspect confirmed preferences and tentative hypotheses
@@ -402,7 +417,7 @@ product should provide a small “What Weavance has learned” surface where the
 
 **Implemented:** User-authored content remains out of routine operational logs.
 
-**Proposed for model integration:** Provider requests should include only the context needed for
+**Proposed (model integration):** Provider requests should include only the context needed for
 the current operation. Retention, deletion, export, hosted-provider data handling, and local-model
 behavior require explicit product decisions before implementation.
 
@@ -418,7 +433,8 @@ recognizing that deterministic output is not automatically semantically safe:
 - Apply timeouts and bounded retries around provider calls.
 - Fall back to deterministic interpretation or recommendation when a model is unavailable, and
   apply the same semantic safety boundary to the fallback output.
-- Never discard a capture because interpretation failed.
+- Never discard a raw capture because interpretation failed or a safety boundary was reached.
+- Preserve allowed portions of a mixed capture even when another portion requires a safety response.
 - Never partially apply a proposal as canonical state.
 - Persist provider, model, prompt/strategy, and schema versions without making provider-specific
   fields part of the core domain.
@@ -459,6 +475,7 @@ boundaries, not only whether a suggestion sounds plausible.
 - safe handling of harmful, manipulative, high-stakes, and crisis-related inputs
 - resistance to user content that attempts to override system safety boundaries
 - regressions across deterministic, hosted, and local strategies
+- whether allowed units of a mixed capture remain available when another unit is rejected
 - whether a safety response avoids diagnosis, unnecessary sensitive-data retention, and learned
   profiling
 - whether failure or uncertainty produces a bounded response rather than unchecked strategy output
@@ -470,7 +487,7 @@ engagement-oriented pressure.
 
 ## Delivery sequence
 
-**Proposed roadmap:**
+**Proposed (roadmap):**
 
 1. **Complete the episode loop — implemented.** Explicit pre-start responses, reported outcomes,
    and user-authored re-entry checkpoints now provide honest episode evidence without inferring
@@ -503,6 +520,10 @@ This sequence ensures Weavance collects honest signals before claiming to learn 
   of the selected strategy or provider?
 - What safe response and escalation behavior is appropriate when harmful or crisis-related content
   appears in a capture?
+- How should the system choose a reliable safety unit when meaning spans multiple lines or items?
+- When a safety response takes display priority, how should the user resume the allowed proposals
+  from the same mixed capture?
+- Which user-facing retention and deletion controls are required for rejected source content?
 - What evidence is required before a provider or model version is allowed to produce user-visible
   output?
 - What provider data-retention requirements are acceptable?

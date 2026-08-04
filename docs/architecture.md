@@ -38,17 +38,17 @@ before ordinary selection.
 flowchart TD
     UI["Focused UI"] --> API["Application API"]
     API --> STORE["Capture persistence"]
-    STORE --> SAFETY_IN["Semantic safety boundary"]
+    STORE --> SAFETY_IN["Semantic safety boundary (input)"]
     SAFETY_IN -->|"Allowed"| INTERPRET["Interpretation strategy"]
     SAFETY_IN -->|"Boundary reached"| SAFE["Safe bounded response"]
-    INTERPRET --> PROPOSAL["Typed proposal"]
-    PROPOSAL --> SAFETY_OUT["Semantic safety boundary"]
+    INTERPRET -->|"Valid"| PROPOSAL["Typed proposal"]
+    PROPOSAL --> SAFETY_OUT["Semantic safety boundary (output)"]
     SAFETY_OUT -->|"Rejected"| SAFE
     SAFETY_OUT -->|"Allowed"| HISTORY["Versioned decision history"]
     HISTORY --> STATE["Canonical tasks and actions"]
     STATE --> POLICY["Deterministic policy"]
     POLICY --> RECOMMEND["Recommendation strategy"]
-    RECOMMEND --> SAFETY_REC["Semantic safety boundary"]
+    RECOMMEND --> SAFETY_REC["Semantic safety boundary (output)"]
     SAFETY_REC -->|"Rejected"| SAFE
     SAFETY_REC -->|"Allowed"| VALIDATE["Policy validation"]
     VALIDATE -->|"Rejected"| NO_EPISODE["No episode; bounded error or retry"]
@@ -69,6 +69,11 @@ future hosted, local, hybrid, or fallback strategy. The current line-based inter
 classify capture meaning, so user review and lifecycle validation are the only current checks before
 materialization; neither is a semantic safety control. See
 [ADR 0007](decisions/0007-cross-strategy-semantic-safety.md).
+
+The raw capture is persisted unchanged before the target input checkpoint. A mixed capture is
+evaluated with its full context, but allowed source units continue through interpretation even when
+another unit reaches the safety boundary. Rejected units do not become canonical work or learning
+signals, and the application does not silently discard the source capture or its allowed proposals.
 
 The deterministic policy layer owns enforceable behavior: explicit deferrals, user boundaries,
 dependency eligibility, completed or archived state, and the precedence of user corrections.
@@ -143,8 +148,10 @@ added when the interpretation workflow provides meaningful signals to observe. S
 ## Request path
 
 1. The API stores the raw capture.
-2. **Target:** The application safety boundary determines whether the capture may proceed through
-   ordinary interpretation or needs a bounded safety response. This step is not implemented yet.
+2. **Target:** The application safety boundary evaluates the full capture, assigns a disposition to
+   each reliable source unit, and routes allowed units to ordinary interpretation while producing a
+   bounded response for rejected units. The raw capture and allowed units are not discarded. This
+   step is not implemented yet.
 3. An interpreter returns a typed proposal with provenance and uncertainty.
 4. **Target:** The same safety boundary evaluates strategy output before it is displayed or used as
    a learning signal. This step is not implemented yet.

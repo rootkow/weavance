@@ -31,10 +31,18 @@ user-visible strategy output or contributes a learning signal. The boundary appl
 deterministic, hosted-model, local-model, hybrid, and fallback strategies. Provider guardrails are
 defense in depth and never replace application policy.
 
-Semantic safety policy takes precedence over user instructions, current context, confirmed
-preferences, learned hypotheses, and strategy scores. Content that reaches the boundary must not be
-converted into prohibited assistance merely because it is structurally valid or explicitly
-requested.
+The application will persist the complete raw capture unchanged before semantic safety evaluation.
+A safety rejection will not delete or discard that user-owned source record. Evaluation will use
+the full capture as context while assigning a disposition to the smallest reliable source unit. In
+a mixed capture, allowed units will continue through interpretation; rejected units will not become
+tasks, actions, recommendations, or learning signals. A safety response may take display priority,
+but allowed proposals from the same capture will remain available rather than being silently lost.
+The user will be told when content was not converted and will retain control over later deletion.
+
+The semantic safety boundary is evaluated before user instructions, current context, confirmed
+preferences, learned hypotheses, or strategy scores can affect a decision. Those inputs cannot
+override the boundary. Content must not be converted into prohibited assistance merely because it
+is structurally valid or explicitly requested.
 
 When a boundary is reached, the application will avoid presenting the content as an ordinary task
 proposal or recommendation. It will use a bounded, non-diagnostic response and provide an
@@ -42,9 +50,10 @@ appropriate path to human or emergency support when relevant. The event must not
 durable trait or personalization signal.
 
 Before the boundary is implemented, a separate implementation decision must define the exact
-classifications, response and escalation behavior, enforcement mechanism, privacy and retention
-treatment, and adversarial regression suite. The mechanism must preserve raw-capture ownership and
-traceability without placing sensitive user-authored content in routine operational logs.
+classifications, source-unit segmentation, response and escalation behavior, enforcement
+mechanism, retention duration and deletion controls, and adversarial regression suite. The
+mechanism must preserve raw-capture ownership and traceability without placing sensitive
+user-authored content in routine operational logs.
 
 No live model output and no public or unattended deployment should be enabled before the boundary
 is implemented and evaluated. The existing personal deterministic prototype must document that it
@@ -60,5 +69,7 @@ does not yet satisfy this decision.
 - Safety tests must cover deterministic, hosted, local, hybrid, and fallback behavior.
 - Harmful, crisis-related, and high-stakes input cannot be treated as ordinary personalization
   evidence.
+- A mixed capture cannot lose its allowed portions merely because another portion reaches the
+  safety boundary.
 - Implementation requires product decisions for safe responses, escalation, privacy, retention,
   observability, and failure behavior before enforcement can be claimed.
