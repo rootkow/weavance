@@ -6,6 +6,22 @@ Weavance is an adaptive activation and re-entry assistant for the moments when d
 begin feels like work of its own. It creates a simpler bridge between everything on your mind and
 one bounded action you can begin now.
 
+## Personal project and safety notice
+
+Weavance is an experimental personal project created by and for its author. It is not a generally
+available or supported product, and it has not been validated as safe or effective for other users.
+Others should not rely on or deploy it, especially in unattended or public-facing settings.
+
+The current prototype does not call a live LLM. At this design stage, Weavance has no
+application-level semantic safety system, so any model integration would depend primarily on the
+guardrails of the selected underlying model. Those guardrails vary by provider and model and are
+not a guarantee of safe output. Weavance's deterministic policies constrain application state and
+recommendation behavior, but they do not evaluate the ethical meaning of generated content.
+
+Weavance is intended only for personal activation and planning support. It must not be treated as
+medical or mental-health care, legal or financial advice, emergency assistance, or a tool for
+planning actions that could harm the user or anyone else.
+
 Instead of requiring you to organize a backlog before receiving help, Weavance starts with an
 unstructured brain dump. It identifies possible tasks and starting actions and lets you correct
 what it understood. Weavance then uses that context to offer one manageable commitment with a
