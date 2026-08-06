@@ -24,6 +24,7 @@ nav:
       - Overview: architecture.md
       - Interpretation contract: interpretation-contract.md
       - Recommendation contract: recommendation-contract.md
+      - LLM and personalization principles: llm-personalization.md
   - Decisions:
       - "ADR 0001: Web-first monorepo": decisions/0001-monorepo.md
       - "ADR 0002: Bounded AI": decisions/0002-bounded-ai.md
