@@ -16,5 +16,7 @@ the architectural decisions behind the project.
   captures into task and action proposals.
 - [Recommendation contract](recommendation-contract.md) defines bounded recommendation episodes,
   events, checkpoints, and HTTP behavior.
+- [LLM and personalization principles](llm-personalization.md) introduces the intended role of
+  models, the authority boundaries, and the staged direction for adaptive behavior.
 
 Architectural decisions are preserved as ADRs in the **Decisions** section.

@@ -204,4 +204,6 @@ GitHub Actions runs the same checks against an isolated PostgreSQL service.
 - [Interpretation contract](docs/interpretation-contract.md): provider-neutral typed interface
 - [Recommendation contract](docs/recommendation-contract.md): bounded episodes, events, checkpoints,
   and API behavior
+- [LLM and personalization principles](docs/llm-personalization.md): high-level intent, boundaries,
+  model roles, and staged direction
 - [Architecture decisions](docs/decisions): accepted and superseded ADRs
