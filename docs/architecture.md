@@ -15,7 +15,7 @@
 | Bounded recommendation episodes | Implemented with a transparent deterministic strategy and persisted context/explanation snapshots |
 | Pre-start responses and reported outcomes | Implemented as append-only episode events |
 | Re-entry checkpoints | Implemented for optional checkpoint capture, prioritized selection, and traceable consumption |
-| Application semantic safety boundary | Accepted in ADR 0007; not implemented; deterministic captures are not semantically classified |
+| Application semantic safety boundary | Accepted in ADR 0007; not implemented across captures, reviewed or canonical edits, context, checkpoints, or strategy output |
 | Raw capture and complete proposal-history UI | Not designed yet |
 
 The current user-facing path saves a capture, creates a versioned interpretation, and lets the user
@@ -44,9 +44,21 @@ flowchart TD
     INTERPRET -->|"Valid"| PROPOSAL["Typed proposal"]
     PROPOSAL --> SAFETY_OUT["Semantic safety boundary (output)"]
     SAFETY_OUT -->|"Rejected"| SAFE
-    SAFETY_OUT -->|"Allowed"| HISTORY["Versioned decision history"]
-    HISTORY --> STATE["Canonical tasks and actions"]
+    SAFETY_OUT -->|"Allowed"| HISTORY["Versioned proposal history"]
+    HISTORY --> REVIEW["User review and edits"]
+    REVIEW --> SAFETY_CONFIRM["Semantic safety boundary (final proposal)"]
+    SAFETY_CONFIRM -->|"Rejected"| SAFE
+    SAFETY_CONFIRM -->|"Allowed"| CONFIRMED["Confirmed interpretation history"]
+    CONFIRMED --> STATE["Canonical tasks and actions"]
+    API --> CANONICAL_EDIT["Later task/action text edits"]
+    CANONICAL_EDIT --> SAFETY_EDIT["Semantic safety boundary (canonical edit)"]
+    SAFETY_EDIT -->|"Rejected"| SAFE
+    SAFETY_EDIT -->|"Allowed"| STATE
     STATE --> POLICY["Deterministic policy"]
+    API --> CONTEXT["Explicit recommendation context"]
+    CONTEXT --> SAFETY_CONTEXT["Semantic safety boundary (context)"]
+    SAFETY_CONTEXT -->|"Rejected"| SAFE
+    SAFETY_CONTEXT -->|"Allowed"| POLICY
     POLICY --> RECOMMEND["Recommendation strategy"]
     RECOMMEND --> SAFETY_REC["Semantic safety boundary (output)"]
     SAFETY_REC -->|"Rejected"| SAFE
@@ -54,7 +66,9 @@ flowchart TD
     VALIDATE -->|"Rejected"| NO_EPISODE["No episode; bounded error or retry"]
     VALIDATE -->|"Valid"| EPISODE["Bounded episode"]
     EPISODE --> EVENTS["Responses and outcomes"]
-    EVENTS -->|"Optional partial-progress note"| REENTRY["Re-entry checkpoint"]
+    EVENTS -->|"Optional partial-progress note"| SAFETY_REENTRY["Semantic safety boundary (checkpoint)"]
+    SAFETY_REENTRY -->|"Rejected"| SAFE
+    SAFETY_REENTRY -->|"Allowed"| REENTRY["Re-entry checkpoint"]
     REENTRY -->|"Newest eligible checkpoint"| POLICY
 ```
 
@@ -74,6 +88,19 @@ The raw capture is persisted unchanged before the target input checkpoint. A mix
 evaluated with its full context, but allowed source units continue through interpretation even when
 another unit reaches the safety boundary. Rejected units do not become canonical work or learning
 signals, and the application does not silently discard the source capture or its allowed proposals.
+
+Safety evaluation is repeated after structured review because the user can add or change proposal
+text after strategy output was checked. The final reviewed proposal must pass before the confirmed
+version and canonical tasks or actions are created. Later free-text task and action edits must also
+pass before canonical state changes; a rejected edit leaves the prior canonical value unchanged.
+Allowed items in a mixed final review remain available rather than being discarded with a rejected
+item. User authorship does not bypass the boundary.
+
+Explicit free-text recommendation context and re-entry checkpoints are input to later strategy and
+personalization decisions, so they must pass the boundary before use. A rejected re-entry point is
+not persisted as an active checkpoint, offered as a later recommendation, or admitted as learning
+evidence. Any separate preservation of rejected user-authored text is governed by the future
+retention and deletion policy rather than the checkpoint lifecycle.
 
 The deterministic policy layer owns enforceable behavior: explicit deferrals, user boundaries,
 dependency eligibility, completed or archived state, and the precedence of user corrections.
@@ -159,23 +186,30 @@ added when the interpretation workflow provides meaningful signals to observe. S
    capture.
 6. The current structured review records user additions, edits, removals, and confirmation as a new
    version.
-7. Confirmation materializes canonical tasks and actions in the same transaction while preserving
+7. **Target:** The safety boundary evaluates the final reviewed proposal, including user additions
+   and edits, before confirmation. This step is not implemented yet.
+8. Confirmation materializes canonical tasks and actions in the same transaction while preserving
    their links to capture and interpretation history.
-8. The task API lists and updates canonical state without rewriting that source history.
-9. Future reviews should narrow questions to ambiguity that would materially change the next
+9. The task API lists canonical state without rewriting that source history. **Target:** Later
+   free-text task and action edits pass the safety boundary before updating canonical state. This
+   safety step is not implemented yet.
+10. Future reviews should narrow questions to ambiguity that would materially change the next
    action.
-10. Deterministic policy removes inactive tasks and actions from consideration.
-11. The replaceable strategy combines eligible actions with the typed context snapshot and proposes
+11. Deterministic policy removes inactive tasks and actions from consideration. **Target:** Any
+    user-authored free-text context passes the safety boundary before it becomes strategy input.
+12. The replaceable strategy combines eligible actions with the typed context snapshot and proposes
     one bounded recommendation.
-12. **Target:** The application safety boundary evaluates the recommendation before persistence or
+13. **Target:** The application safety boundary evaluates the recommendation before persistence or
     display. This step is not implemented yet.
-13. Deterministic policy validates and stores an allowed bounded recommendation episode.
-14. The focused UI presents the entry point, stopping condition, and concise reason.
-15. Episode events record explicit responses and reported outcomes without inferring an answer
+14. Deterministic policy validates and stores an allowed bounded recommendation episode.
+15. The focused UI presents the entry point, stopping condition, and concise reason.
+16. Episode events record explicit responses and reported outcomes without inferring an answer
     from silence. Replacement and follow-on recommendations receive new immutable boundaries.
-16. Partial progress may atomically create a user-authored checkpoint. When no episode is current,
-    the newest eligible checkpoint is consumed into a bounded child episode before ordinary
-    candidate selection.
+17. **Target:** A free-text re-entry point passes the safety boundary before it is persisted as an
+    active checkpoint or admitted as learning evidence. This step is not implemented yet.
+18. Partial progress may atomically create an allowed user-authored checkpoint. When no episode is
+    current, the newest eligible checkpoint is consumed into a bounded child episode before
+    ordinary candidate selection.
 
 The API and lifecycle details are documented in the
 [recommendation contract](recommendation-contract.md).

@@ -90,4 +90,6 @@ product direction rather than implemented enforcement. [ADR 0007](decisions/0007
 requires one application-owned boundary across deterministic, hosted, local, hybrid, and fallback
 strategies before public or unattended deployment or live model output. That boundary preserves the
 complete user-owned capture and allows safe portions of a mixed capture to continue rather than
-silently discarding the user's brain dump.
+silently discarding the user's brain dump. It also rechecks a final reviewed proposal and later
+free-text task or action edits before canonical state changes, and screens user-authored context and
+re-entry points before they become strategy input, active checkpoints, or learning evidence.

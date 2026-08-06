@@ -26,10 +26,17 @@ Weavance will treat semantic safety as an application-owned boundary across the 
 interpretation, recommendation, re-entry, and personalization workflow. It is not specific to an
 LLM provider.
 
-Every capture-derived proposal and recommendation must pass this boundary before it becomes
-user-visible strategy output or contributes a learning signal. The boundary applies to
-deterministic, hosted-model, local-model, hybrid, and fallback strategies. Provider guardrails are
-defense in depth and never replace application policy.
+Every capture-derived proposal, user-edited proposal, free-text context or re-entry checkpoint, and
+recommendation must pass this boundary before it becomes canonical state, user-visible strategy
+output, strategy input, or a learning signal. The final reviewed interpretation must be evaluated
+again after user additions or edits and before confirmation materializes tasks or actions. Later
+free-text task and action edits must pass the same boundary before they update canonical state. The
+boundary applies to deterministic, hosted-model, local-model, hybrid, and fallback strategies.
+Provider guardrails are defense in depth and never replace application policy.
+
+If user review produces a mixed final proposal, allowed items remain available for confirmation
+rather than being discarded with a rejected item. A rejected later edit leaves the existing
+canonical task or action unchanged.
 
 The application will persist the complete raw capture unchanged before semantic safety evaluation.
 A safety rejection will not delete or discard that user-owned source record. Evaluation will use
@@ -39,10 +46,14 @@ tasks, actions, recommendations, or learning signals. A safety response may take
 but allowed proposals from the same capture will remain available rather than being silently lost.
 The user will be told when content was not converted and will retain control over later deletion.
 
-The semantic safety boundary is evaluated before user instructions, current context, confirmed
-preferences, learned hypotheses, or strategy scores can affect a decision. Those inputs cannot
-override the boundary. Content must not be converted into prohibited assistance merely because it
-is structurally valid or explicitly requested.
+The semantic safety boundary is evaluated before user-authored instructions or context, confirmed
+preferences, learned hypotheses, or strategy scores can affect a decision. A free-text re-entry
+checkpoint must be evaluated before it is persisted as a checkpoint, offered as a later entry
+point, or treated as learning evidence. Rejected content may be preserved only as a separately
+controlled user-owned source record under the retention and deletion policy; it must not remain an
+active proposal, checkpoint, preference, or hypothesis. These inputs cannot override the boundary.
+Content must not be converted into prohibited assistance merely because it is structurally valid
+or explicitly requested.
 
 When a boundary is reached, the application will avoid presenting the content as an ordinary task
 proposal or recommendation. It will use a bounded, non-diagnostic response and provide an
@@ -69,6 +80,8 @@ does not yet satisfy this decision.
 - Safety tests must cover deterministic, hosted, local, hybrid, and fallback behavior.
 - Harmful, crisis-related, and high-stakes input cannot be treated as ordinary personalization
   evidence.
+- User review, later canonical edits, explicit context, and re-entry checkpoints cannot bypass the
+  boundary merely because they are user-authored.
 - A mixed capture cannot lose its allowed portions merely because another portion reaches the
   safety boundary.
 - Implementation requires product decisions for safe responses, escalation, privacy, retention,

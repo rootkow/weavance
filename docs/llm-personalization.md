@@ -92,6 +92,14 @@ display of the allowed proposals, but those proposals are not silently lost. The
 told that some content was not converted, and the original text remains subject to user-controlled
 retention and deletion.
 
+The boundary is not limited to the initial capture or to strategy-generated text. A final reviewed
+proposal must be evaluated again after user additions or edits and before it is confirmed or
+materialized. Later free-text task and action edits must pass before canonical state changes.
+User-authored recommendation context and re-entry points must pass before they can affect a
+strategy, become an active checkpoint, or contribute to personalization. Rejected text may be
+preserved only as a separately controlled user-owned source record under the future retention and
+deletion policy; it does not remain an active proposal, checkpoint, preference, or hypothesis.
+
 A safety response must not diagnose the user, turn sensitive input into a durable personal trait,
 or silently treat the input as evidence for future personalization. Exact classifications,
 response language, escalation behavior, and implementation mechanisms remain proposed.
@@ -115,8 +123,8 @@ The following behavior exists today:
   distinct events.
 - Silence is not success, failure, avoidance, or any other behavioral signal.
 - A deterministic fallback keeps core data accessible without a model provider or API key.
-- No semantic safety mechanism currently classifies a capture or prevents harmful or high-stakes
-  content from becoming an editable deterministic proposal.
+- No semantic safety mechanism currently classifies a capture, reviewed or canonical edit,
+  recommendation context, re-entry point, or strategy output before it affects later behavior.
 
 ## Appropriate uses of an LLM
 
@@ -211,26 +219,48 @@ No deterministic, hosted, local, hybrid, or fallback interpretation or recommend
 ```mermaid
 flowchart TD
     CAPTURE["Capture"] --> SAFETY_IN["Application semantic safety boundary (input)"]
-    SAFETY_IN -->|"Allowed"| INFER["Interpreter or recommendation strategy"]
+    SAFETY_IN -->|"Allowed"| INFER["Interpreter"]
     SAFETY_IN -->|"Boundary reached"| SAFE["Safe bounded response"]
-    STATE["Canonical state and explicit context"] --> INFER
-    PROFILE["Confirmed preferences and relevant episode evidence"] --> INFER
-    INFER -->|"Unavailable or invalid"| FALLBACK["Deterministic fallback"]
+    INFER -->|"Unavailable or invalid"| FALLBACK["Deterministic interpreter fallback"]
     INFER -->|"Valid"| PROPOSAL["Typed, sourced proposal"]
     FALLBACK --> PROPOSAL
     PROPOSAL --> SAFETY_OUT["Application semantic safety boundary (output)"]
     SAFETY_OUT -->|"Rejected"| SAFE
-    SAFETY_OUT -->|"Allowed"| POLICY["Deterministic policy validation"]
-    POLICY -->|"Rejected"| NO_EPISODE["No episode; bounded error or retry"]
-    POLICY -->|"Valid"| EPISODE["Bounded recommendation episode"]
+    SAFETY_OUT -->|"Allowed"| REVIEW["User review and edits"]
+    REVIEW --> SAFETY_FINAL["Semantic safety boundary (final proposal)"]
+    SAFETY_FINAL -->|"Rejected"| SAFE
+    SAFETY_FINAL -->|"Allowed"| STATE["Safety-cleared canonical state"]
+    EDIT["Later task/action text edit"] --> SAFETY_EDIT["Semantic safety boundary (canonical edit)"]
+    SAFETY_EDIT -->|"Rejected"| SAFE
+    SAFETY_EDIT -->|"Allowed"| STATE
+    CONTEXT["Current user-authored context"] --> SAFETY_CONTEXT["Semantic safety boundary (context)"]
+    SAFETY_CONTEXT -->|"Rejected"| SAFE
+    SAFETY_CONTEXT -->|"Allowed"| POLICY["Deterministic eligibility policy"]
+    STATE --> POLICY
+    POLICY --> RECOMMEND["Recommendation strategy"]
+    PROFILE["Confirmed preferences and safety-eligible evidence"] --> RECOMMEND
+    RECOMMEND -->|"Unavailable or invalid"| REC_FALLBACK["Deterministic recommendation fallback"]
+    RECOMMEND -->|"Valid"| REC["Bounded recommendation"]
+    REC_FALLBACK --> REC
+    REC --> SAFETY_REC["Application semantic safety boundary (output)"]
+    SAFETY_REC -->|"Rejected"| SAFE
+    SAFETY_REC -->|"Allowed"| VALIDATE["Deterministic policy validation"]
+    VALIDATE -->|"Rejected"| NO_EPISODE["No episode; bounded error or retry"]
+    VALIDATE -->|"Valid"| EPISODE["Bounded recommendation episode"]
     EPISODE --> EVENTS["Explicit responses and reported outcomes"]
-    EVENTS --> LEARN["Inspect, confirm, or revise learned hypotheses"]
+    EVENTS -->|"Enumerated response or outcome"| LEARN["Inspect, confirm, or revise learned hypotheses"]
+    EVENTS -->|"Free-text re-entry point"| SAFETY_REENTRY["Semantic safety boundary (checkpoint)"]
+    SAFETY_REENTRY -->|"Rejected"| SAFE
+    SAFETY_REENTRY -->|"Allowed"| REENTRY["Active re-entry checkpoint"]
+    REENTRY --> POLICY
+    SAFETY_REENTRY -->|"Eligible evidence"| LEARN
     LEARN --> PROFILE
 ```
 
 The same safety boundary applies before and after every deterministic, hosted, or local strategy;
 a deterministic fallback is not presumed safe merely because it does not generate new language.
-The model-facing layer receives a deliberately selected view of application state rather than an
+User review and later edits are authority signals, not safety overrides. The model-facing layer
+receives a deliberately selected, safety-eligible view of application state rather than an
 undifferentiated dump of the user's entire history. Prompt inputs, model/provider identity,
 strategy version, output schema version, and the facts used in an explanation must remain
 traceable enough to reproduce or audit a recommendation.
@@ -496,10 +526,11 @@ engagement-oriented pressure.
    request, and constraints through the UI so strategies receive meaningful current context rather
    than only the persisted empty/default snapshot.
 3. **Implement and evaluate the application safety boundary.** Cover the existing capture and
-   deterministic recommendation paths, document prohibited assistance, safe response and fallback
-   behavior, provider requirements, privacy-preserving incident handling, and an adversarial
-   regression suite. Complete this before public or unattended deployment and before exposing live
-   model output.
+   deterministic recommendation paths; final reviewed proposals; later task and action edits;
+   user-authored context and re-entry checkpoints; and admission of evidence into personalization.
+   Document prohibited assistance, safe response and fallback behavior, provider requirements,
+   privacy-preserving incident handling, and an adversarial regression suite. Complete this before
+   public or unattended deployment and before exposing live model output.
 4. **Live interpretation provider.** Implement one hosted or local model behind the existing
    `CaptureInterpreter` protocol, with structured output, timeouts, versioning, and deterministic
    and safety fallback.

@@ -14,10 +14,11 @@ over the main screen.
 
 > **Personal project and safety:** Weavance is an experimental project created by and for its
 > author, not a generally available or supported product, and it has not been validated for other
-> users. The current deterministic prototype accepts free-text captures without classifying their
-> semantic risk; it does not call a live LLM. Do not deploy it unattended or publicly, and do not
-> rely on it for harmful, emergency, medical, mental-health, legal, or financial use. Future provider
-> guardrails will be supplementary rather than a guarantee of safe behavior. See the
+> users. The current deterministic prototype accepts free-text captures, task and action edits, and
+> re-entry points without classifying their semantic risk; it does not call a live LLM. Do not
+> deploy it unattended or publicly, and do not rely on it for harmful, emergency, medical,
+> mental-health, legal, or financial use. Future provider guardrails will be supplementary rather
+> than a guarantee of safe behavior. See the
 > [semantic safety boundary](docs/llm-personalization.md#semantic-safety-and-intended-use-boundary).
 
 ## Why Weavance
