@@ -12,6 +12,13 @@ what it understood. Weavance then uses that context to offer one manageable comm
 clear stopping point. Your full task list remains available when you request it without taking
 over the main screen.
 
+> **Personal project and safety:** Weavance is an experimental project created by and for its
+> author, not a generally available or supported product. The current deterministic prototype does
+> not classify the semantic risk of user-authored text and does not call a live LLM. Do not deploy
+> it unattended or publicly. Do not use it to facilitate harm or rely on it for emergency, medical,
+> mental-health, legal, or financial guidance. See the
+> [semantic safety decision](docs/decisions/0007-cross-strategy-semantic-safety.md).
+
 ## Why Weavance
 
 Traditional task and calendar tools are good at storing decisions, but they often leave the

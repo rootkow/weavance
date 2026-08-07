@@ -15,6 +15,7 @@
 | Bounded recommendation episodes | Implemented with a transparent deterministic strategy and persisted context/explanation snapshots |
 | Pre-start responses and reported outcomes | Implemented as append-only episode events |
 | Re-entry checkpoints | Implemented for optional checkpoint capture, prioritized selection, and traceable consumption |
+| Application semantic safety boundary | Accepted in ADR 0007; not implemented |
 | Raw capture and complete proposal-history UI | Not designed yet |
 
 The current user-facing path saves a capture, creates a versioned interpretation, and lets the user
@@ -37,18 +38,48 @@ before ordinary selection.
 flowchart TD
     UI["Focused UI"] --> API["Application API"]
     API --> STORE["Capture persistence"]
-    STORE --> INTERPRET["Interpretation strategy"]
+    STORE --> SAFETY_IN["Semantic safety: input"]
+    SAFETY_IN -->|"Allowed"| INTERPRET["Interpretation strategy"]
+    SAFETY_IN -->|"Boundary reached"| SAFE["Safe bounded response"]
     INTERPRET --> PROPOSAL["Typed proposal"]
-    PROPOSAL --> HISTORY["Versioned decision history"]
-    HISTORY --> STATE["Canonical tasks and actions"]
+    PROPOSAL --> SAFETY_OUT["Semantic safety: strategy output"]
+    SAFETY_OUT -->|"Rejected"| SAFE
+    SAFETY_OUT -->|"Allowed"| HISTORY["Versioned proposal history"]
+    HISTORY --> REVIEW["User review and edits"]
+    REVIEW --> SAFETY_FINAL["Semantic safety: final proposal"]
+    SAFETY_FINAL -->|"Rejected"| SAFE
+    SAFETY_FINAL -->|"Allowed"| STATE["Canonical tasks and actions"]
     STATE --> POLICY["Deterministic policy"]
     POLICY --> RECOMMEND["Recommendation strategy"]
-    RECOMMEND --> VALIDATE["Policy validation"]
+    RECOMMEND --> SAFETY_REC["Semantic safety: recommendation"]
+    SAFETY_REC -->|"Rejected"| SAFE
+    SAFETY_REC -->|"Allowed"| VALIDATE["Policy validation"]
     VALIDATE --> EPISODE["Bounded episode"]
     EPISODE --> EVENTS["Responses and outcomes"]
-    EVENTS -->|"Optional partial-progress note"| REENTRY["Re-entry checkpoint"]
+    EVENTS -->|"Optional partial-progress note"| SAFETY_REENTRY["Semantic safety: checkpoint"]
+    SAFETY_REENTRY -->|"Rejected"| SAFE
+    SAFETY_REENTRY -->|"Allowed"| REENTRY["Re-entry checkpoint"]
     REENTRY -->|"Newest eligible checkpoint"| POLICY
 ```
+
+These target gates are application-owned and apply to deterministic, model-assisted, and fallback
+strategies. They are accepted in
+[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md) but are not implemented yet.
+
+| Checkpoint | Before content may become |
+|---|---|
+| Capture input, after the raw source is preserved | Interpreter input |
+| Interpreter or recommendation output | Persisted or user-visible strategy output |
+| Final reviewed proposal | Confirmed history and canonical tasks or actions |
+| Later task/action edits | Updated canonical state |
+| Free-text recommendation context | Strategy input |
+| Free-text re-entry point | An active checkpoint or learning signal |
+| Candidate personalization evidence | A preference or learned hypothesis |
+
+User authorship does not bypass the boundary. Allowed parts of mixed content remain available, while
+rejected content does not become canonical work, a recommendation, or learning evidence. Exact
+classifications, response behavior, retention controls, enforcement, and adversarial tests remain
+future implementation decisions.
 
 The interpretation layer converts free-form language and available context into structured
 proposals. A model may suggest task boundaries, possible actions, urgency, duration, or
@@ -123,6 +154,9 @@ added when the interpretation workflow provides meaningful signals to observe. S
 [ADR 0005](decisions/0005-observability-foundation.md).
 
 ## Request path
+
+The numbered path below describes current behavior. The target safety gates above will interpose at
+the listed transitions after their mechanism is designed and implemented.
 
 1. The API stores the raw capture.
 2. An interpreter returns a typed proposal with provenance and uncertainty.

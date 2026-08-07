@@ -6,8 +6,11 @@ This document sets the high-level direction for using language models and adapti
 in Weavance. It is intentionally a starting point for discussion, not a final architecture,
 persistence model, provider choice, or implementation plan.
 
-Later documents and architecture decisions will define the semantic safety mechanism, system
-boundaries, evidence model, user controls, privacy rules, evaluation criteria, and delivery gates.
+The cross-strategy safety boundary is accepted in
+[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md); its exact enforcement mechanism
+remains a future decision. Later documents and architecture decisions will define the remaining
+system boundaries, evidence model, user controls, privacy rules, evaluation criteria, and delivery
+gates.
 
 ## Current state
 
@@ -58,7 +61,8 @@ Semantic risk exists even in the deterministic prototype because user text can b
 ordinary task or recommendation without understanding its meaning. Provider guardrails may help,
 but they cannot be the only safety boundary. Before live model output or wider deployment, the
 application needs an explicit, evaluated safety design that also covers deterministic and fallback
-paths.
+paths. [ADR 0007](decisions/0007-cross-strategy-semantic-safety.md) defines the application-owned
+boundary and the inputs and outputs it must cover.
 
 ### Important behavior stays bounded
 
@@ -141,7 +145,7 @@ and deletion in detail.
 The broad sequence is:
 
 1. Collect meaningful explicit recommendation context.
-2. Define and evaluate an application-owned semantic safety boundary.
+2. Implement and evaluate the application-owned semantic safety boundary defined in ADR 0007.
 3. Add one model-assisted interpretation strategy behind the existing contract.
 4. Add model-assisted recommendation without cross-session learning.
 5. Add user-managed explicit preferences.
