@@ -83,11 +83,12 @@ No outcome is inferred when the user does not report one.
 
 ## Safety boundary
 
-Weavance provides activation and planning support, not medical diagnosis or treatment. It avoids
-clinical claims and does not present inferred mental states as facts. The current deterministic
-prototype does not semantically classify user-authored text or strategy output, so this boundary is
-accepted direction rather than implemented enforcement.
+Weavance provides activation and planning support, not medical, mental-health, legal, financial, or
+emergency guidance. User-owned captures and tasks may mention sensitive or high-stakes subjects;
+storing that content does not authorize Weavance to infer a condition, generate professional
+advice, disclose it to a provider, or turn it into a durable trait.
 
-[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md) requires one application-owned boundary
-across deterministic, hosted, local, hybrid, and fallback strategies before public or unattended
-deployment or live model output.
+[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md) separates user-owned storage, provider
+egress, generated behavior, and personalization eligibility. The current deterministic prototype
+does not call a live provider or personalize across sessions. Its generated-behavior safety policy
+is accepted direction rather than implemented enforcement.

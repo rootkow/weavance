@@ -15,7 +15,7 @@
 | Bounded recommendation episodes | Implemented with a transparent deterministic strategy and persisted context/explanation snapshots |
 | Pre-start responses and reported outcomes | Implemented as append-only episode events |
 | Re-entry checkpoints | Implemented for optional checkpoint capture, prioritized selection, and traceable consumption |
-| Application semantic safety boundary | Accepted in ADR 0007; not implemented |
+| AI trust boundaries | Accepted in ADR 0007; provider egress, generated-behavior safety, and personalization eligibility are not implemented |
 | Raw capture and complete proposal-history UI | Not designed yet |
 
 The current user-facing path saves a capture, creates a versioned interpretation, and lets the user
@@ -37,49 +37,45 @@ before ordinary selection.
 ```mermaid
 flowchart TD
     UI["Focused UI"] --> API["Application API"]
-    API --> STORE["Capture persistence"]
-    STORE --> SAFETY_IN["Semantic safety: input"]
-    SAFETY_IN -->|"Allowed"| INTERPRET["Interpretation strategy"]
-    SAFETY_IN -->|"Boundary reached"| SAFE["Safe bounded response"]
+    API --> STORE["User-owned source and canonical state"]
+    STORE --> SELECT["Provider egress and context selection"]
+    SELECT --> INTERPRET["Interpretation strategy"]
     INTERPRET --> PROPOSAL["Typed proposal"]
-    PROPOSAL --> SAFETY_OUT["Semantic safety: strategy output"]
-    SAFETY_OUT -->|"Rejected"| SAFE
-    SAFETY_OUT -->|"Allowed"| HISTORY["Versioned proposal history"]
+    PROPOSAL --> BEHAVIOR["Generated-behavior and policy checks"]
+    BEHAVIOR -->|"Refused or constrained"| BOUNDED["Bounded product response"]
+    BEHAVIOR -->|"Allowed"| HISTORY["Versioned proposal history"]
     HISTORY --> REVIEW["User review and edits"]
-    REVIEW --> SAFETY_FINAL["Semantic safety: final proposal"]
-    SAFETY_FINAL -->|"Rejected"| SAFE
-    SAFETY_FINAL -->|"Allowed"| STATE["Canonical tasks and actions"]
+    REVIEW --> VALIDATE["Structure, references, and provenance"]
+    VALIDATE --> STATE["Canonical tasks and actions"]
     STATE --> POLICY["Deterministic policy"]
     POLICY --> RECOMMEND["Recommendation strategy"]
-    RECOMMEND --> SAFETY_REC["Semantic safety: recommendation"]
-    SAFETY_REC -->|"Rejected"| SAFE
-    SAFETY_REC -->|"Allowed"| VALIDATE["Policy validation"]
-    VALIDATE --> EPISODE["Bounded episode"]
+    RECOMMEND --> REC_CHECK["Generated-behavior and policy checks"]
+    REC_CHECK --> EPISODE["Bounded episode"]
     EPISODE --> EVENTS["Responses and outcomes"]
-    EVENTS -->|"Optional partial-progress note"| SAFETY_REENTRY["Semantic safety: checkpoint"]
-    SAFETY_REENTRY -->|"Rejected"| SAFE
-    SAFETY_REENTRY -->|"Allowed"| REENTRY["Re-entry checkpoint"]
+    EVENTS -->|"Optional partial-progress note"| REENTRY["User-owned re-entry checkpoint"]
     REENTRY -->|"Newest eligible checkpoint"| POLICY
+    EVENTS --> EVIDENCE["Candidate evidence"]
+    EVIDENCE --> ELIGIBILITY["Personalization eligibility"]
+    ELIGIBILITY --> PROFILE["Inspectable application-owned knowledge"]
+    PROFILE --> SELECT
 ```
 
-These target gates are application-owned and apply to deterministic, model-assisted, and fallback
-strategies. They are accepted in
-[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md) but are not implemented yet.
+These boundaries separate data ownership from application behavior. User-authored content can be
+stored without first passing a semantic classifier. Sending that content to a provider,
+transforming or recommending it, and admitting it into durable personalization each require a
+different application-owned decision. They are defined in
+[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md).
 
-| Checkpoint | Before content may become |
-|---|---|
-| Capture input, after the raw source is preserved | Interpreter input |
-| Interpreter or recommendation output | Persisted or user-visible strategy output |
-| Final reviewed proposal | Confirmed history and canonical tasks or actions |
-| Later task/action edits | Updated canonical state |
-| Free-text recommendation context | Strategy input |
-| Free-text re-entry point | An active checkpoint or learning signal |
-| Candidate personalization evidence | A preference or learned hypothesis |
+| Boundary | Governs | Does not imply |
+|---|---|---|
+| User-owned storage | Access, structure, retention, and deletion of captures, tasks, edits, and checkpoints | Permission to disclose, infer, or personalize |
+| Provider egress | The minimum source and context sent for one model job | Eligibility for future model calls or durable memory |
+| Generated behavior | Typed output, valid references, policy, and safe application behavior | Content moderation of the user's private task store |
+| Personalization eligibility | What may become a preference or learned hypothesis | That repetition or storage makes an inference true |
 
-User authorship does not bypass the boundary. Allowed parts of mixed content remain available, while
-rejected content does not become canonical work, a recommendation, or learning evidence. Exact
-classifications, response behavior, retention controls, enforcement, and adversarial tests remain
-future implementation decisions.
+The current deterministic prototype implements user-owned storage, structural validation, and
+policy validation. Provider egress does not occur because there is no live model. Generated-behavior
+safety policy and personalization eligibility remain future implementation work.
 
 The interpretation layer converts free-form language and available context into structured
 proposals. A model may suggest task boundaries, possible actions, urgency, duration, or
@@ -158,8 +154,9 @@ added when the interpretation workflow provides meaningful signals to observe. S
 
 ## Request path
 
-The numbered path below describes current behavior. The target safety gates above will interpose at
-the listed transitions after their mechanism is designed and implemented.
+The numbered path below describes current behavior. Provider egress and generated-behavior checks
+will interpose at the strategy transitions after their focused mechanisms are designed and
+implemented.
 
 1. The API stores the raw capture.
 2. An interpreter returns a typed proposal with provenance and uncertainty.
