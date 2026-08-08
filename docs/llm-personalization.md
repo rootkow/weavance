@@ -110,7 +110,8 @@ At a high level, a model may eventually help Weavance:
 - ask one focused question when the answer would materially change the next step
 
 These roles remain behind typed, provider-neutral boundaries. They do not make the model the source
-of truth for canonical state or application policy.
+of truth for canonical state or application policy. The workflow details and current implementation
+gaps are documented in [Model-assisted workflows](model-assisted-workflows.md).
 
 ## Responsibilities a model does not receive
 
@@ -159,7 +160,6 @@ Each stage should receive its own focused design discussion before implementatio
 Follow-up documents and decisions will answer:
 
 - What exact semantic safety classifications and checkpoints are required?
-- How do model-assisted strategies fit into the request and persistence paths?
 - What evidence may form a learned hypothesis, and how is authority resolved?
 - What can the user inspect, confirm, correct, disable, export, or delete?
 - What provider, retention, and context-minimization rules apply?

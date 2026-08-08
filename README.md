@@ -213,4 +213,6 @@ GitHub Actions runs the same checks against an isolated PostgreSQL service.
   and API behavior
 - [LLM and personalization principles](docs/llm-personalization.md): high-level intent, boundaries,
   model roles, and staged direction
+- [Model-assisted workflows](docs/model-assisted-workflows.md): interpretation, recommendation,
+  re-entry, validation, and degraded behavior
 - [Architecture decisions](docs/decisions): accepted and superseded ADRs
