@@ -9,8 +9,9 @@ model, or personalization design.
 
 The interpretation protocol and deterministic fallback are implemented. Recommendation episodes
 and a versioned deterministic selection strategy are also implemented, but a separate pluggable
-recommendation-strategy interface does not exist yet. Application-owned semantic safety is accepted
-in [ADR 0007](decisions/0007-cross-strategy-semantic-safety.md) but is not implemented.
+recommendation-strategy interface does not exist yet. The distinct provider-egress,
+generated-behavior, and personalization boundaries are accepted in
+[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md) but are not implemented.
 
 ## Responsibility split
 
@@ -22,28 +23,33 @@ Model integration does not collapse interpretation, policy, and recommendation i
 | Interpretation strategy | Propose structured meaning from a capture | Provider-neutral protocol and deterministic implementation exist |
 | Deterministic policy | Enforce state, user boundaries, eligibility, and references | Implemented |
 | Recommendation strategy | Select among eligible actions and propose one bounded commitment | Versioned deterministic implementation exists; pluggable interface is future work |
-| Semantic safety | Gate user-authored and strategy content across every path | Accepted; not implemented |
+| Provider egress | Minimize and govern context sent outside the application | Accepted; no live provider path exists |
+| Generated-behavior safety | Constrain application-generated transformations and recommendations | Accepted; not implemented |
+| Personalization eligibility | Admit only appropriate evidence into durable application-owned knowledge | Accepted; no durable personalization exists |
 | User review | Correct or reject proposed task and action meaning | Implemented for tasks and first actions |
 
 A model may contribute to an interpretation or recommendation strategy. It does not replace
-deterministic policy, semantic safety, or explicit user review.
+deterministic policy, the applicable trust boundaries, or explicit user review.
 
 ## Capture interpretation
 
 The target interpretation path is:
 
 1. Preserve the exact raw capture as the user-owned source record.
-2. Apply the application-owned semantic safety input boundary.
-3. Send allowed source units, reference time, and time zone to a `CaptureInterpreter`.
+2. Select the minimum source units and context eligible for the chosen interpreter; apply provider
+   data rules before any hosted call.
+3. Send that selection, reference time, and time zone to a `CaptureInterpreter`.
 4. Validate the complete response against the provider-neutral `InterpretationProposal` schema.
-5. Apply the semantic safety output boundary.
+5. Apply generated-behavior safety and deterministic application policy.
 6. Persist and display the allowed proposal for structured user review.
-7. Recheck the final reviewed proposal after additions or edits.
-8. Materialize confirmed tasks and actions only after that final check passes.
+7. Validate the final reviewed proposal's structure, references, and provenance after additions or
+   edits.
+8. Materialize confirmed tasks and actions after validation.
 
-Steps 1, 3, 4, 6, and 8 exist today with the deterministic interpreter. The semantic safety steps
-are accepted target behavior. A future hosted or local model can implement `CaptureInterpreter`
-without changing the orchestration or canonical task model.
+Steps 1, 3, 4, 6, 7, and 8 exist today with the deterministic interpreter. That path does not cross
+a provider boundary. A future hosted or local model can implement `CaptureInterpreter` without
+changing the orchestration or canonical task model, but a hosted implementation also needs a
+separately approved data-handling design.
 
 Model-assisted interpretation may propose:
 
@@ -88,8 +94,8 @@ It may propose one commitment containing:
 - strategy and schema version information
 
 The model cannot create a new canonical reference or restore an ineligible one. Its complete output
-must pass a provider-neutral proposal schema, the application safety boundary, and deterministic
-policy validation before it becomes a persisted `RecommendationEpisode`.
+must pass a provider-neutral proposal schema, the generated-behavior safety boundary, and
+deterministic policy validation before it becomes a persisted `RecommendationEpisode`.
 
 The current episode schema and lifecycle are documented in the
 [recommendation contract](recommendation-contract.md). Before adding a model-assisted recommender,
@@ -102,10 +108,10 @@ A user-authored re-entry checkpoint records where the user wants to resume. A mo
 smaller or clearer entry point for the same canonical task and action, but it must preserve the
 source checkpoint and must not infer an interruption, outcome, or next step from silence.
 
-The resulting suggestion follows the same rules as any other recommendation: semantic safety,
-typed validation, deterministic policy validation, one bounded episode, and explicit user response.
-If a model is unavailable, the existing deterministic path may offer the allowed checkpoint text
-directly.
+The resulting suggestion follows the same rules as any other recommendation: generated-behavior
+safety, typed validation, deterministic policy validation, one bounded episode, and explicit user
+response. If a model is unavailable, the existing deterministic path may offer the allowed
+checkpoint text directly.
 
 ## Focused questions
 
@@ -123,12 +129,15 @@ Every model-assisted workflow must:
 - reject unknown response fields and invalid canonical references
 - validate the entire response before persistence or display
 - preserve source provenance and distinguish model derivation from evidence source
-- record strategy, provider, model, prompt, and schema versions needed for audit or replay
+- record strategy, provider, model, schema, and prompt-template identifiers or hashes needed to
+  evaluate and explain behavior
 - keep provider-specific fields out of core domain contracts
 - explain a recommendation using only factors that actually affected the decision
 
-The exact prompt artifacts and provider responses retained for reproducibility are deferred to the
-privacy and user-control design.
+Raw prompts and provider responses are not retained by default. Retaining them requires an explicit
+purpose, access policy, duration, deletion behavior, and sensitive-data treatment. Safe decision
+metadata and version identifiers should support routine traceability without creating an
+indefinite archive of user content.
 
 ## Reliability and degraded behavior
 
@@ -137,9 +146,9 @@ unavailable provider, malformed response, or failed validation must not discard 
 partially apply canonical state.
 
 Operational failure may fall back to the existing deterministic interpretation or recommendation
-behavior. The fallback is intentionally modest and remains subject to the same semantic safety
-boundary; deterministic output is not presumed safe merely because it does not generate new
-language.
+behavior. The fallback is intentionally modest and remains subject to generated-behavior policy
+when it transforms or recommends content; deterministic output is not presumed safe merely because
+it does not generate new language.
 
 ## Deferred decisions
 
@@ -147,7 +156,8 @@ This workflow boundary does not decide:
 
 - the first hosted or local model and provider
 - prompt design or provider SDK integration
-- the semantic safety classifications or enforcement mechanism
+- the generated-behavior classifications or enforcement mechanism
+- provider data handling, retention, and context-selection rules
 - the personalization evidence model and precedence rules
 - user-facing controls for learned knowledge and provider data
 - strategy evaluation datasets, thresholds, or promotion gates

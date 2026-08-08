@@ -33,4 +33,4 @@ nav:
       - "ADR 0004: PostgreSQL and Alembic": decisions/0004-postgresql-and-alembic.md
       - "ADR 0005: Observability foundation": decisions/0005-observability-foundation.md
       - "ADR 0006: Bounded recommendation episodes": decisions/0006-bounded-recommendation-episodes.md
-      - "ADR 0007: Application-owned semantic safety": decisions/0007-cross-strategy-semantic-safety.md
+      - "ADR 0007: Separate AI trust boundaries": decisions/0007-cross-strategy-semantic-safety.md

@@ -6,11 +6,10 @@ This document sets the high-level direction for using language models and adapti
 in Weavance. It is intentionally a starting point for discussion, not a final architecture,
 persistence model, provider choice, or implementation plan.
 
-The cross-strategy safety boundary is accepted in
-[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md); its exact enforcement mechanism
-remains a future decision. Later documents and architecture decisions will define the remaining
-system boundaries, evidence model, user controls, privacy rules, evaluation criteria, and delivery
-gates.
+The distinct AI trust boundaries are accepted in
+[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md); their exact enforcement mechanisms
+remain future decisions. Later documents and architecture decisions will define the evidence
+model, user controls, provider data rules, evaluation criteria, and delivery gates.
 
 ## Current state
 
@@ -25,8 +24,8 @@ prototype uses:
   checkpoints
 
 The current UI does not yet collect useful recommendation context such as available time or an
-easier-work request. The application also does not yet classify the semantic risk of captures,
-edits, checkpoints, or strategy output.
+easier-work request. The application also does not yet implement a generated-behavior safety policy
+or personalization eligibility rules.
 
 ## Product intent
 
@@ -48,7 +47,7 @@ manageable way back while preserving their authority.
 
 Current instructions, explicit corrections, and deliberate task state have more authority than
 model output or learned patterns. A model may propose; it does not silently decide. User authority
-does not override semantic safety or deterministic application invariants.
+does not override generated-behavior safety or deterministic application invariants.
 
 ### Inference remains a proposal
 
@@ -57,12 +56,11 @@ provenance. Plausible language is not evidence that a suggestion is correct.
 
 ### Safety belongs to the application
 
-Semantic risk exists even in the deterministic prototype because user text can be presented as an
-ordinary task or recommendation without understanding its meaning. Provider guardrails may help,
-but they cannot be the only safety boundary. Before live model output or wider deployment, the
-application needs an explicit, evaluated safety design that also covers deterministic and fallback
-paths. [ADR 0007](decisions/0007-cross-strategy-semantic-safety.md) defines the application-owned
-boundary and the inputs and outputs it must cover.
+User-owned storage, disclosure to a provider, generated application behavior, and personalization
+are different boundaries. Provider guardrails may help, but they cannot replace application policy.
+Before live model output or wider deployment, the relevant egress and generated-behavior designs
+must be explicit and evaluated across model-assisted, deterministic, and fallback paths.
+[ADR 0007](decisions/0007-cross-strategy-semantic-safety.md) defines this separation.
 
 ### Important behavior stays bounded
 
@@ -72,10 +70,11 @@ point, stopping condition, and concise reason.
 
 ### Learning stays inspectable and revisable
 
-Initial personalization should use structured knowledge, not hidden fine-tuning on one user's
-history. Explicit preferences, episode-specific reports, and tentative learned patterns remain
+Personalization belongs to Weavance, not to the model. Initial personalization should use typed,
+application-owned knowledge, not provider-side memory or hidden fine-tuning on one user's history.
+Explicit preferences, episode-specific reports, and tentative learned patterns remain
 distinguishable. Tentative patterns must be scoped, correctable, and lower authority than current
-user intent.
+user intent. A replaceable model receives only the eligible context needed for one inference.
 
 ### Silence remains unknown
 
@@ -146,7 +145,7 @@ and deletion in detail.
 The broad sequence is:
 
 1. Collect meaningful explicit recommendation context.
-2. Implement and evaluate the application-owned semantic safety boundary defined in ADR 0007.
+2. Define provider data handling and implement the generated-behavior boundary from ADR 0007.
 3. Add one model-assisted interpretation strategy behind the existing contract.
 4. Add model-assisted recommendation without cross-session learning.
 5. Add user-managed explicit preferences.
@@ -159,7 +158,7 @@ Each stage should receive its own focused design discussion before implementatio
 
 Follow-up documents and decisions will answer:
 
-- What exact semantic safety classifications and checkpoints are required?
+- What generated behaviors require refusal, constraint, or review?
 - What evidence may form a learned hypothesis, and how is authority resolved?
 - What can the user inspect, confirm, correct, disable, export, or delete?
 - What provider, retention, and context-minimization rules apply?

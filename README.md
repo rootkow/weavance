@@ -14,10 +14,10 @@ over the main screen.
 
 > **Personal project and safety:** Weavance is an experimental project created by and for its
 > author, not a generally available or supported product. The current deterministic prototype does
-> not classify the semantic risk of user-authored text and does not call a live LLM. Do not deploy
-> it unattended or publicly. Do not use it to facilitate harm or rely on it for emergency, medical,
+> not call a live LLM and has no implemented generated-behavior safety policy. Do not deploy it
+> unattended or publicly. Do not use it to facilitate harm or rely on it for emergency, medical,
 > mental-health, legal, or financial guidance. See the
-> [semantic safety decision](docs/decisions/0007-cross-strategy-semantic-safety.md).
+> [AI trust-boundary decision](docs/decisions/0007-cross-strategy-semantic-safety.md).
 
 ## Why Weavance
 
