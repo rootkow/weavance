@@ -18,5 +18,7 @@ the architectural decisions behind the project.
   events, checkpoints, and HTTP behavior.
 - [LLM and personalization principles](llm-personalization.md) introduces the intended role of
   models, the authority boundaries, and the staged direction for adaptive behavior.
+- [Model-assisted workflows](model-assisted-workflows.md) describes how interpretation,
+  recommendation, re-entry, validation, and fallback fit together.
 
 Architectural decisions are preserved as ADRs in the **Decisions** section.
